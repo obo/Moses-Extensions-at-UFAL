@@ -1,4 +1,4 @@
-// $Id$
+// $Id: TypeDef.h 2180 2009-02-18 11:35:41Z hieuhoang1972 $
 
 /***********************************************************************
 Moses - factored phrase-based language decoder
@@ -141,6 +141,7 @@ enum LMImplementation
 	,Internal	= 4
 	,RandLM 	= 5
 	,Remote 	= 6
+        ,ParalellBackoff = 7
 
 };
 

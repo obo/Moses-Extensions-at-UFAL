@@ -1,4 +1,4 @@
-// $Id$
+// $Id: LanguageModelFactory.cpp 2180 2009-02-18 11:35:41Z hieuhoang1972 $
 
 
 /***********************************************************************
@@ -43,6 +43,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "LanguageModelInternal.h"
 #include "LanguageModelSkip.h"
 #include "LanguageModelJoint.h"
+#include "LanguageModelParalellBackoff.h"
 
 using namespace std;
 
@@ -109,6 +110,11 @@ namespace LanguageModelFactory
 																		, scoreIndexManager);
 				#endif
 				break;
+			case ParalellBackoff:
+				#ifdef LM_SRI
+					lm = new LanguageModelParalellBackoff(true, scoreIndexManager);
+				#endif
+					break;
 	  	case Internal:
 				#ifdef LM_INTERNAL
 					lm = new LanguageModelInternal(true, scoreIndexManager);

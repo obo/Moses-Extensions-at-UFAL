@@ -36,6 +36,7 @@ libmoses_a_SOURCES = \
 	LanguageModelRemote.cpp \
 	LanguageModelSingleFactor.cpp \
 	LanguageModelSkip.cpp \
+	LanguageModelParalellBackoff.cpp \
 	TrellisPath.cpp \
 	TrellisPathCollection.cpp \
 	LexicalReordering.cpp \
