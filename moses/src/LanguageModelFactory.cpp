@@ -43,6 +43,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "LanguageModelInternal.h"
 #include "LanguageModelSkip.h"
 #include "LanguageModelJoint.h"
+#include "LanguageModelParalellBackoff.h"
 
 using namespace std;
 
@@ -109,6 +110,14 @@ namespace LanguageModelFactory
 																		, scoreIndexManager);
 				#endif
 				break;
+<<<<<<< HEAD:moses/src/LanguageModelFactory.cpp
+=======
+			case ParalellBackoff:
+				#ifdef LM_SRI
+					lm = new LanguageModelParalellBackoff(true, scoreIndexManager);
+				#endif
+					break;
+>>>>>>> 0e73619a9561167be35aeccfa2326116148b961c:moses/src/LanguageModelFactory.cpp
 	  	case Internal:
 				#ifdef LM_INTERNAL
 					lm = new LanguageModelInternal(true, scoreIndexManager);
