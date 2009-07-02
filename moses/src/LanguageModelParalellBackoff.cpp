@@ -91,10 +91,6 @@ bool LanguageModelParalellBackoff::Load(const std::string &filePath, const std::
 		m_nGramOrder= nGramOrder;
 	
 		m_factorTypesOrdered= factorTypes;
-	  
-	  m_weight			= weight;
-	  m_nGramOrder	= nGramOrder;
-	  m_filePath		= filePath;
 
 		m_unknownId = m_srilmVocab->unkIndex();
     CreateFactors();
@@ -106,7 +102,7 @@ VocabIndex LanguageModelParalellBackoff::GetLmID( const std::string &str ) const
     return m_srilmVocab->getIndex( str.c_str(), m_unknownId );
 }
 
-VocabIndex LanguageModelParalellBackoff::GetLmID( const Factor *factor, FactorType ft ) const
+VocabIndex LanguageModelParalellBackoff::GetLmID( const Factor *factor, size_t ft ) const
 {
 	size_t factorId = factor->GetId();
 
@@ -137,7 +133,7 @@ void LanguageModelParalellBackoff::CreateFactors()
 		VocabIndex lmId = GetLmID(str);
 		pomFactorTypeNum = str[0] - 'a';
 
-		size_t factorId = factorCollection.AddFactor(Output, pomFactorTypeNum, &(str[2]) )->GetId();
+		size_t factorId = factorCollection.AddFactor(Output, m_factorTypesOrdered[pomFactorTypeNum], &(str[2]) )->GetId();
 		lmIdMap[factorId * 10 + pomFactorTypeNum] = lmId;
 		maxFactorId = (factorId > maxFactorId) ? factorId : maxFactorId;
 	}
@@ -157,11 +153,14 @@ void LanguageModelParalellBackoff::CreateFactors()
       factorIdStart = m_sentenceStartArray[factorType]->GetId();
       factorIdEnd = m_sentenceEndArray[factorType]->GetId();
 
-      for (size_t i = 0; i < 10; i++)
+      /*for (size_t i = 0; i < 10; i++)
       {
 	      lmIdMap[factorIdStart * 10 + i] = GetLmID(BOS_);
 				lmIdMap[factorIdEnd * 10 + i] = GetLmID(EOS_);
-	    }
+	    }*/
+
+			lmIdMap[factorIdStart * 10 + index] = GetLmID(BOS_);
+			lmIdMap[factorIdEnd * 10 + index] = GetLmID(EOS_);
 
 		}
 	
@@ -184,7 +183,7 @@ void LanguageModelParalellBackoff::CreateFactors()
 				FactorType factorType = m_factorTypesOrdered[index];
 				const Factor *factor = word[factorType];
 				
-				(*widMatrix)[currPos][index] = GetLmID(factor, factorType);
+				(*widMatrix)[currPos][index] = GetLmID(factor, index/*factorType*/);
 
 			}
 			
@@ -195,5 +194,4 @@ void LanguageModelParalellBackoff::CreateFactors()
 	}
 	
 }
-
 
