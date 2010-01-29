@@ -67,9 +67,9 @@ protected:
 	FactoredVocab		*m_srilmVocab;
 	FNgram 					*m_srilmModel;
 	VocabIndex	m_unknownId;
-
+  FNgramSpecs<FNgramCount>* fnSpecs;
 	//std::vector<VocabIndex> m_lmIdLookup;
-	std::map<size_t, VocabIndex> lmIdMap;
+	std::map<size_t, VocabIndex>* lmIdMap;
 
   WidMatrix *widMatrix;
 
