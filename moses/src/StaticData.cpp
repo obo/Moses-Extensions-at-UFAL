@@ -172,7 +172,17 @@ bool StaticData::LoadData(Parameter *parameter)
 	  }	    
 	  m_outputSearchGraph = true;
 	}
-        else
+	// ... in extended format
+	else if (m_parameter->GetParam("output-search-graph-extended").size() > 0)
+	{
+	  if (m_parameter->GetParam("output-search-graph-extended").size() != 1) {
+	    UserMessage::Add(string("ERROR: wrong format for switch -output-search-graph-extended file"));
+	    return false;
+	  }	    
+	  m_outputSearchGraph = true;
+		m_outputSearchGraphExtended = true;
+	}
+	else
 	  m_outputSearchGraph = false;
 #ifdef HAVE_PROTOBUF
 	if (m_parameter->GetParam("output-search-graph-pb").size() > 0)
@@ -255,14 +265,14 @@ bool StaticData::LoadData(Parameter *parameter)
 	m_weightWordPenalty				= Scan<float>( m_parameter->GetParam("weight-w")[0] );
 	m_weightUnknownWord				= (m_parameter->GetParam("weight-u").size() > 0) ? Scan<float>(m_parameter->GetParam("weight-u")[0]) : 1;
 
-	m_distortionScoreProducer = new DistortionScoreProducer(m_scoreIndexManager);
-	m_allWeights.push_back(m_weightDistortion);
-
 	m_wpProducer = new WordPenaltyProducer(m_scoreIndexManager);
 	m_allWeights.push_back(m_weightWordPenalty);
 
 	m_unknownWordPenaltyProducer = new UnknownWordPenaltyProducer(m_scoreIndexManager);
 	m_allWeights.push_back(m_weightUnknownWord);
+
+	m_distortionScoreProducer = new DistortionScoreProducer(m_scoreIndexManager);
+	m_allWeights.push_back(m_weightDistortion);
 
 	// reordering constraints
 	m_maxDistortion = (m_parameter->GetParam("distortion-limit").size() > 0) ?
@@ -373,7 +383,6 @@ bool StaticData::LoadData(Parameter *parameter)
 	if (!LoadLanguageModels()) return false;
 	if (!LoadGenerationTables()) return false;
 	if (!LoadPhraseTables()) return false;
-	if (!LoadMapping()) return false;
 	if (!LoadGlobalLexicalModel()) return false;
 
 	m_scoreIndexManager.InitFeatureNames();
@@ -413,17 +422,14 @@ void StaticData::SetBooleanParameter( bool *parameter, string parameterName, boo
 
 StaticData::~StaticData()
 {
-	delete m_parameter;
-
 	RemoveAllInColl(m_phraseDictionary);
 	RemoveAllInColl(m_generationDictionary);
 	RemoveAllInColl(m_languageModel);
-	RemoveAllInColl(m_decodeStepVL);
 	RemoveAllInColl(m_reorderModels);
 	RemoveAllInColl(m_globalLexicalModels);
 	
 	// delete trans opt
-	map<std::pair<const DecodeGraph*, Phrase>, std::pair< TranslationOptionList*, clock_t > >::iterator iterCache;
+	map<std::pair<size_t, Phrase>, std::pair< TranslationOptionList*, clock_t > >::iterator iterCache;
 	for (iterCache = m_transOptCache.begin() ; iterCache != m_transOptCache.end() ; ++iterCache)
 	{
 		TranslationOptionList *transOptList = iterCache->second.first;
@@ -847,47 +853,21 @@ bool StaticData::LoadPhraseTables()
 			IFVERBOSE(1)
 				PrintUserTime(string("Start loading PhraseTable ") + filePath);
 			VERBOSE(1,"filePath: " << filePath << endl);
-			if (!FileExists(filePath+".binphr.idx"))
-			{	// memory phrase table
-				VERBOSE(2,"using standard phrase tables" << endl);
-                if (!FileExists(filePath) && FileExists(filePath + ".gz")) {
-                    filePath += ".gz";
-                    VERBOSE(2,"Using gzipped file" << endl);
-                }
-				if (m_inputType != SentenceInput)
-				{
-					UserMessage::Add("Must use binary phrase table for this input type");
-					return false;
-				}
-				
-				PhraseDictionaryMemory *pd=new PhraseDictionaryMemory(numScoreComponent);
-				if (!pd->Load(input
-								 , output
-								 , filePath
-								 , weight
-								 , maxTargetPhrase[index]
-								 , GetAllLM()
-								 , GetWeightWordPenalty()))
-				{
-					delete pd;
-					return false;
-				}
-				m_phraseDictionary.push_back(pd);
-			}
-			else 
-			{ // binary phrase table
-				VERBOSE(1, "using binary phrase tables for idx "<<currDict<<"\n");
-				PhraseDictionaryTreeAdaptor *pd=new PhraseDictionaryTreeAdaptor(numScoreComponent,(currDict==0 ? m_numInputScores : 0));
-				if (!pd->Load(input,output,filePath,weight,
-									 maxTargetPhrase[index],
-									 GetAllLM(),
-									 GetWeightWordPenalty()))
-				{
-					delete pd;
-					return false;
-				}
-				m_phraseDictionary.push_back(pd);
-			}
+            
+            PhraseDictionaryFeature* pdf = new PhraseDictionaryFeature(
+                  numScoreComponent
+                ,  (currDict==0 ? m_numInputScores : 0)
+                , input
+                , output
+                , filePath
+                , weight
+                , maxTargetPhrase[index]);
+                
+             m_phraseDictionary.push_back(pdf);
+                
+                
+            
+			
 
 			index++;
 		}
@@ -898,8 +878,9 @@ bool StaticData::LoadPhraseTables()
 	return true;
 }
 
-bool StaticData::LoadMapping()
+vector<DecodeGraph*> StaticData::GetDecodeStepVL(const InputType& source) const
 {
+    vector<DecodeGraph*> decodeStepVL;
 	// mapping
 	const vector<string> &mappingVector = m_parameter->GetParam("mapping");
 	DecodeStep *prev = 0;
@@ -932,7 +913,7 @@ bool StaticData::LoadMapping()
 		else 
 		{
 			UserMessage::Add("Malformed mapping!");
-			return false;
+			assert(false);
 		}
 		
 		DecodeStep* decodeStep = 0;
@@ -944,9 +925,9 @@ bool StaticData::LoadMapping()
 						strme << "No phrase dictionary with index "
 									<< index << " available!";
 						UserMessage::Add(strme.str());
-						return false;
+						assert(false);
 					}
-				decodeStep = new DecodeStepTranslation(m_phraseDictionary[index], prev);
+				decodeStep = new DecodeStepTranslation(m_phraseDictionary[index]->GetDictionary(source), prev);
 			break;
 			case Generate:
 				if(index>=m_generationDictionary.size())
@@ -955,7 +936,7 @@ bool StaticData::LoadMapping()
 						strme << "No generation dictionary with index "
 									<< index << " available!";
 						UserMessage::Add(strme.str());
-						return false;
+						assert(false);
 					}
 				decodeStep = new DecodeStepGeneration(m_generationDictionary[index], prev);
 			break;
@@ -964,22 +945,20 @@ bool StaticData::LoadMapping()
 			break;
 		}
 		assert(decodeStep);
-		if (m_decodeStepVL.size() < vectorList + 1) 
+		if (decodeStepVL.size() < vectorList + 1) 
 		{
-			m_decodeStepVL.push_back(new DecodeGraph());
+			decodeStepVL.push_back(new DecodeGraph(decodeStepVL.size()));
 		}
-		m_decodeStepVL[vectorList]->Add(decodeStep);
+		decodeStepVL[vectorList]->Add(decodeStep);
 		prev = decodeStep;
 		previousVectorList = vectorList;
 	}
 	
-	return true;
+	return decodeStepVL;
 }
 
 void StaticData::CleanUpAfterSentenceProcessing() const
 {
-	for(size_t i=0;i<m_phraseDictionary.size();++i)
-		m_phraseDictionary[i]->CleanUp();
 	for(size_t i=0;i<m_generationDictionary.size();++i)
 		m_generationDictionary[i]->CleanUp();
   
@@ -997,10 +976,6 @@ void StaticData::CleanUpAfterSentenceProcessing() const
     binary format is used) */
 void StaticData::InitializeBeforeSentenceProcessing(InputType const& in) const
 {
-	m_input = &in;
-	for(size_t i=0;i<m_phraseDictionary.size();++i) {
-		m_phraseDictionary[i]->InitializeForInput(in);
-	}
 	for(size_t i=0;i<m_reorderModels.size();++i) {
 		m_reorderModels[i]->InitializeForInput(in);
 	}
@@ -1031,9 +1006,11 @@ void StaticData::SetWeightsForScoreProducer(const ScoreProducer* sp, const std::
 
 const TranslationOptionList* StaticData::FindTransOptListInCache(const DecodeGraph &decodeGraph, const Phrase &sourcePhrase) const
 {
-	std::pair<const DecodeGraph*, Phrase> key(&decodeGraph, sourcePhrase);
-	
-	std::map<std::pair<const DecodeGraph*, Phrase>, std::pair<TranslationOptionList*,clock_t> >::iterator iter
+	std::pair<size_t, Phrase> key(decodeGraph.GetPosition(), sourcePhrase);
+#ifdef WITH_THREADS   
+	boost::mutex::scoped_lock lock(m_transOptCacheMutex);
+#endif   
+	std::map<std::pair<size_t, Phrase>, std::pair<TranslationOptionList*,clock_t> >::iterator iter
 			= m_transOptCache.find(key);
 	if (iter == m_transOptCache.end())
 		return NULL;
@@ -1048,7 +1025,7 @@ void StaticData::ReduceTransOptCache() const
 	
 	// find cutoff for last used time
 	priority_queue< clock_t > lastUsedTimes;
-	std::map<std::pair<const DecodeGraph*, Phrase>, std::pair<TranslationOptionList*,clock_t> >::iterator iter;
+	std::map<std::pair<size_t, Phrase>, std::pair<TranslationOptionList*,clock_t> >::iterator iter;
 	iter = m_transOptCache.begin();
 	while( iter != m_transOptCache.end() )
 	{
@@ -1065,7 +1042,7 @@ void StaticData::ReduceTransOptCache() const
 	{
 		if (iter->second.second < cutoffLastUsedTime)
 		{
-			std::map<std::pair<const DecodeGraph*, Phrase>, std::pair<TranslationOptionList*,clock_t> >::iterator iterRemove = iter++;
+			std::map<std::pair<size_t, Phrase>, std::pair<TranslationOptionList*,clock_t> >::iterator iterRemove = iter++;
 			delete iterRemove->second.first;
 			m_transOptCache.erase(iterRemove);
 		}
@@ -1076,8 +1053,11 @@ void StaticData::ReduceTransOptCache() const
 
 void StaticData::AddTransOptListToCache(const DecodeGraph &decodeGraph, const Phrase &sourcePhrase, const TranslationOptionList &transOptList) const
 {
-	std::pair<const DecodeGraph*, Phrase> key(&decodeGraph, sourcePhrase);
+	std::pair<size_t, Phrase> key(decodeGraph.GetPosition(), sourcePhrase);
 	TranslationOptionList* storedTransOptList = new TranslationOptionList(transOptList);
+#ifdef WITH_THREADS   
+    boost::mutex::scoped_lock lock(m_transOptCacheMutex);
+#endif
 	m_transOptCache[key] = make_pair( storedTransOptList, clock() );
 	ReduceTransOptCache();
 }

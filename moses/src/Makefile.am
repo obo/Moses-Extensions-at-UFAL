@@ -1,9 +1,6 @@
 lib_LIBRARIES = libmoses.a
-AM_CPPFLAGS = -W -Wall -ffor-scope -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES 
+AM_CPPFLAGS = -W -Wall -ffor-scope -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES $(BOOST_CPPFLAGS)
 libmoses_a_SOURCES = \
-	AlignmentElement.cpp \
-	AlignmentPhrase.cpp \
-	AlignmentPair.cpp \
 	BitmapContainer.cpp \
 	ConfusionNet.cpp \
 	DecodeGraph.cpp \
@@ -42,7 +39,6 @@ libmoses_a_SOURCES = \
 	LexicalReordering.cpp \
 	LexicalReorderingTable.cpp \
 	Manager.cpp \
-	mempool.cpp \
 	NGramCollection.cpp \
 	NGramNode.cpp \
 	PCNTools.cpp \

@@ -97,18 +97,19 @@ Parameter::Parameter()
 	AddParam("output-word-graph", "owg", "Output stack info as word graph. Takes filename, 0=only hypos in stack, 1=stack + nbest hypos");
 	AddParam("time-out", "seconds after which is interrupted (-1=no time-out, default is -1)");
 	AddParam("output-search-graph", "osg", "Output connected hypotheses of search into specified filename");
+	AddParam("output-search-graph-extended", "osgx", "Output connected hypotheses of search into specified filename, in extended format");
 #ifdef HAVE_PROTOBUF
 	AddParam("output-search-graph-pb", "pb", "Write phrase lattice to protocol buffer objects in the specified path.");
 #endif
 	AddParam("cube-pruning-pop-limit", "cbp", "How many hypotheses should be popped for each stack. (default = 1000)");
 	AddParam("cube-pruning-diversity", "cbd", "How many hypotheses should be created for each coverage. (default = 0)");
-	AddParam("search-algorithm", "", "Which search algorithm to use. 0=normal stack, 1=cube pruning, 2=cube growing. (default = 0)");
-	AddParam("constraint","","Target sentence to produce");
+	AddParam("search-algorithm", "Which search algorithm to use. 0=normal stack, 1=cube pruning, 2=cube growing. (default = 0)");
+	AddParam("constraint", "Target sentence to produce");
 	AddParam("use-alignment-info", "Use word-to-word alignment: actually it is only used to output the word-to-word alignment. Word-to-word alignments are taken from the phrase table if any. Default is false.");
 	AddParam("print-alignment-info", "Output word-to-word alignment into the log file. Word-to-word alignments are takne from the phrase table if any. Default is false");
 	AddParam("print-alignment-info-in-n-best", "Include word-to-word alignment in the n-best list. Word-to-word alignments are takne from the phrase table if any. Default is false");
 	AddParam("link-param-count", "Number of parameters on word links when using confusion networks or lattices (default = 1)");
-	AddParam("description","","Source language, target language, description");
+	AddParam("description", "Source language, target language, description");
 }
 
 Parameter::~Parameter()

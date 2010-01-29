@@ -52,7 +52,7 @@ namespace Moses
 Manager::Manager(InputType const& source, SearchAlgorithm searchAlgorithm)
 :m_source(source)
 ,m_transOptColl(source.CreateTranslationOptionCollection())
-,m_search(Search::CreateSearch(source, searchAlgorithm, *m_transOptColl))
+,m_search(Search::CreateSearch(*this, source, searchAlgorithm, *m_transOptColl))
 ,m_start(clock())
 ,interrupted_flag(0)
 {
@@ -82,23 +82,24 @@ void Manager::ProcessSentence()
 {
 	// reset statistics
 	const StaticData &staticData = StaticData::Instance();
-	staticData.ResetSentenceStats(m_source);
+	ResetSentenceStats(m_source);
 
   // collect translation options for this sentence
-	const vector <DecodeGraph*>
-			&decodeStepVL = staticData.GetDecodeStepVL();
+    vector <DecodeGraph*>
+			decodeStepVL = staticData.GetDecodeStepVL(m_source);
 	m_transOptColl->CreateTranslationOptions(decodeStepVL);
 
   // some reporting on how long this took
   clock_t gotOptions = clock();
   float et = (gotOptions - m_start);
-  IFVERBOSE(2) { staticData.GetSentenceStats().AddTimeCollectOpts( gotOptions - m_start ); }
+  IFVERBOSE(2) { GetSentenceStats().AddTimeCollectOpts( gotOptions - m_start ); }
   et /= (float)CLOCKS_PER_SEC;
   VERBOSE(1, "Collecting options took " << et << " seconds" << endl);
 
 	// search for best translation with the specified algorithm
 	m_search->ProcessSentence();
 	VERBOSE(1, "Search took " << ((clock()-m_start)/(float)CLOCKS_PER_SEC) << " seconds" << endl);
+    RemoveAllInColl(decodeStepVL);  
 }
 
 /**
@@ -177,13 +178,13 @@ void Manager::CalcDecoderStatistics() const
   const Hypothesis *hypo = GetBestHypothesis();
 	if (hypo != NULL)
   {
-		StaticData::Instance().GetSentenceStats().CalcFinalStats(*hypo);
+		GetSentenceStats().CalcFinalStats(*hypo);
     IFVERBOSE(2) {
 		 	if (hypo != NULL) {
 		   	string buff;
 		  	string buff2;
 		   	TRACE_ERR( "Source and Target Units:"
-		 							<< *StaticData::Instance().GetInput());
+            << hypo->GetInput());
 				buff2.insert(0,"] ");
 				buff2.insert(0,(hypo->GetCurrTargetPhrase()).ToString());
 				buff2.insert(0,":");
@@ -221,11 +222,11 @@ void OutputWordGraph(std::ostream &outputWordGraphStream, const Hypothesis *hypo
 		<< "\ta=";
 
 	// phrase table scores
-	const std::vector<PhraseDictionary*> &phraseTables = staticData.GetPhraseDictionaries();
-	std::vector<PhraseDictionary*>::const_iterator iterPhraseTable;
+	const std::vector<PhraseDictionaryFeature*> &phraseTables = staticData.GetPhraseDictionaries();
+	std::vector<PhraseDictionaryFeature*>::const_iterator iterPhraseTable;
 	for (iterPhraseTable = phraseTables.begin() ; iterPhraseTable != phraseTables.end() ; ++iterPhraseTable)
 	{
-				const PhraseDictionary *phraseTable = *iterPhraseTable;
+				const PhraseDictionaryFeature *phraseTable = *iterPhraseTable;
 				vector<float> scores = hypo->GetScoreBreakdown().GetScoresForProducer(phraseTable);
 				
 				outputWordGraphStream << scores[0];
@@ -322,33 +323,59 @@ void Manager::GetWordGraph(long translationId, std::ostream &outputWordGraphStre
 
 void OutputSearchGraph(long translationId, std::ostream &outputSearchGraphStream, const Hypothesis *hypo, const Hypothesis *recombinationHypo, int forward, double fscore)
 {
-        outputSearchGraphStream << translationId
-				<< " hyp=" << hypo->GetId()
-				<< " stack=" << hypo->GetWordsBitmap().GetNumWordsCovered();
-	if (hypo->GetId() > 0)
+	const vector<FactorType> &outputFactorOrder = StaticData::Instance().GetOutputFactorOrder();
+	bool extendedFormat = StaticData::Instance().GetOutputSearchGraphExtended();
+	outputSearchGraphStream << translationId;
+
+	// special case: initial hypothesis
+	if ( hypo->GetId() == 0 )
 	{
-	  const Hypothesis *prevHypo = hypo->GetPrevHypo();
-	  outputSearchGraphStream << " back=" << prevHypo->GetId()
-				  << " score=" << hypo->GetScore()
-				  << " transition=" << (hypo->GetScore() - prevHypo->GetScore());
+		outputSearchGraphStream << " hyp=0 stack=0";
+		if (!extendedFormat) 
+		{
+			outputSearchGraphStream << " forward=" << forward	<< " fscore=" << fscore;
+		}
+		outputSearchGraphStream << endl;
+		return;
 	}
 
-	if (recombinationHypo != NULL)
+  const Hypothesis *prevHypo = hypo->GetPrevHypo();
+
+	// output in traditional format
+	if (!extendedFormat)
 	{
-	  outputSearchGraphStream << " recombined=" << recombinationHypo->GetId();
+		outputSearchGraphStream << " hyp=" << hypo->GetId()
+			<< " stack=" << hypo->GetWordsBitmap().GetNumWordsCovered()
+		  << " back=" << prevHypo->GetId()
+		  << " score=" << hypo->GetScore()
+			<< " transition=" << (hypo->GetScore() - prevHypo->GetScore());
+
+		if (recombinationHypo != NULL)
+		  outputSearchGraphStream << " recombined=" << recombinationHypo->GetId();
+		
+		outputSearchGraphStream << " forward=" << forward	<< " fscore=" << fscore
+		  << " covered=" << hypo->GetCurrSourceWordsRange().GetStartPos() 
+			<< "-" << hypo->GetCurrSourceWordsRange().GetEndPos()
+			<< " out=" << hypo->GetCurrTargetPhrase().GetStringRep(outputFactorOrder)
+			<< endl;
+		return;
 	}
+	
+	// output in extended format
+	if (recombinationHypo != NULL) 
+		outputSearchGraphStream << " hyp=" << recombinationHypo->GetId();
+	else
+		outputSearchGraphStream << " hyp=" << hypo->GetId();
 
-	outputSearchGraphStream << " forward=" << forward
-				<< " fscore=" << fscore;
+	outputSearchGraphStream << " back=" << prevHypo->GetId();
 
-	if (hypo->GetId() > 0)
-	{
-	  outputSearchGraphStream << " covered=" << hypo->GetCurrSourceWordsRange().GetStartPos() 
-				  << "-" << hypo->GetCurrSourceWordsRange().GetEndPos()
-				  << " out=" << hypo->GetCurrTargetPhrase();
-	}
+	ScoreComponentCollection scoreBreakdown = hypo->GetScoreBreakdown();
+	scoreBreakdown.MinusEquals( prevHypo->GetScoreBreakdown() );
+	outputSearchGraphStream << " [ ";
+	StaticData::Instance().GetScoreIndexManager().PrintLabeledScores( outputSearchGraphStream, scoreBreakdown );
+	outputSearchGraphStream << " ]";
 
-	outputSearchGraphStream << endl;
+	outputSearchGraphStream << " out=" << hypo->GetCurrTargetPhrase().GetStringRep(outputFactorOrder) << endl;
 }
 
 void Manager::GetConnectedGraph(
