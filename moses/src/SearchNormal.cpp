@@ -1,3 +1,4 @@
+#include "Manager.h"
 #include "Timer.h"
 #include "SearchNormal.h"
 
@@ -9,8 +10,9 @@ namespace Moses
  * /param source input sentence
  * /param transOptColl collection of translation options to be used for this sentence
  */
-SearchNormal::SearchNormal(const InputType &source, const TranslationOptionCollection &transOptColl)
-	:m_source(source)
+SearchNormal::SearchNormal(Manager& manager, const InputType &source, const TranslationOptionCollection &transOptColl)
+  :Search(manager)
+   ,m_source(source)
 	,m_hypoStackColl(source.GetSize() + 1)
 	,m_initialTargetPhrase(Output)
 	,m_start(clock())
@@ -31,7 +33,7 @@ SearchNormal::SearchNormal(const InputType &source, const TranslationOptionColle
 	std::vector < HypothesisStackNormal >::iterator iterStack;
 	for (size_t ind = 0 ; ind < m_hypoStackColl.size() ; ++ind)
 	{
-		HypothesisStackNormal *sourceHypoColl = new HypothesisStackNormal();
+		HypothesisStackNormal *sourceHypoColl = new HypothesisStackNormal(m_manager);
 		sourceHypoColl->SetMaxHypoStackSize(staticData.GetMaxHypoStackSize(),staticData.GetMinHypoStackDiversity());
 		sourceHypoColl->SetBeamWidth(staticData.GetBeamWidth());
 
@@ -51,11 +53,11 @@ SearchNormal::~SearchNormal()
 void SearchNormal::ProcessSentence()
 {
 	const StaticData &staticData = StaticData::Instance();
-	SentenceStats &stats = staticData.GetSentenceStats();
+	SentenceStats &stats = m_manager.GetSentenceStats();
 	clock_t t=0; // used to track time for steps
 
 	// initial seed hypothesis: nothing translated, no words produced
-	Hypothesis *hypo = Hypothesis::Create(m_source, m_initialTargetPhrase);
+	Hypothesis *hypo = Hypothesis::Create(m_manager,m_source, m_initialTargetPhrase);
 	m_hypoStackColl[0]->AddPrune(hypo);
 
 	// go through each stack
@@ -94,8 +96,8 @@ void SearchNormal::ProcessSentence()
 	}
 
 	// some more logging
-	IFVERBOSE(2) { staticData.GetSentenceStats().SetTimeTotal( clock()-m_start ); }
-	VERBOSE(2, staticData.GetSentenceStats());
+	IFVERBOSE(2) { m_manager.GetSentenceStats().SetTimeTotal( clock()-m_start ); }
+	VERBOSE(2, m_manager.GetSentenceStats());
 }
 
 
@@ -277,7 +279,7 @@ void SearchNormal::ExpandAllHypotheses(const Hypothesis &hypothesis, size_t star
 void SearchNormal::ExpandHypothesis(const Hypothesis &hypothesis, const TranslationOption &transOpt, float expectedScore)
 {
 	const StaticData &staticData = StaticData::Instance();
-	SentenceStats &stats = staticData.GetSentenceStats();
+	SentenceStats &stats = m_manager.GetSentenceStats();
 	clock_t t=0; // used to track time for steps
 
 	Hypothesis *newHypo;

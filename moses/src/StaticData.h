@@ -25,6 +25,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <vector>
 #include <map>
 #include <memory>
+
+#ifdef WITH_THREADS
+#include <boost/thread/mutex.hpp>
+#endif
+
 #include "TypeDef.h"
 #include "ScoreIndexManager.h"
 #include "FactorCollection.h"
@@ -46,7 +51,7 @@ namespace Moses
 class InputType;
 class LexicalReordering;
 class GlobalLexicalModel;
-class PhraseDictionary;
+class PhraseDictionaryFeature;
 class GenerationDictionary;
 class DistortionScoreProducer;
 class WordPenaltyProducer;
@@ -61,9 +66,8 @@ private:
 protected:	
 
 	std::map<long,Phrase> m_constraints;
-	std::vector<PhraseDictionary*>	m_phraseDictionary;
+	std::vector<PhraseDictionaryFeature*>	m_phraseDictionary;
 	std::vector<GenerationDictionary*>	m_generationDictionary;
-	std::vector <DecodeGraph*>		m_decodeStepVL;
 	Parameter			*m_parameter;
 	std::vector<FactorType>			m_inputFactorOrder, m_outputFactorOrder;
 	LMList									m_languageModel;
@@ -129,7 +133,7 @@ protected:
 	bool m_PrintAlignmentInfo;
 	bool m_PrintAlignmentInfoNbest;
 		
-	mutable std::auto_ptr<SentenceStats> m_sentenceStats;
+	
 	std::string m_factorDelimiter; //! by default, |, but it can be changed
 	size_t m_maxFactorIdx[2];  //! number of factors on source and target side
 	size_t m_maxNumFactors;  //! max number of factors on both source and target sides
@@ -144,15 +148,19 @@ protected:
 	size_t m_timeout_threshold; //! seconds after which time out is activated
 
 	bool m_useTransOptCache; //! flag indicating, if the persistent translation option cache should be used
-	mutable std::map<std::pair<const DecodeGraph*, Phrase>, pair<TranslationOptionList*,clock_t> > m_transOptCache; //! persistent translation option cache
+	mutable std::map<std::pair<size_t, Phrase>, pair<TranslationOptionList*,clock_t> > m_transOptCache; //! persistent translation option cache
 	size_t m_transOptCacheMaxSize; //! maximum size for persistent translation option cache
-
-	mutable const InputType* m_input;  //! holds reference to current sentence
+    //FIXME: Single lock for cache not most efficient. However using a 
+    //reader-writer for LRU cache is tricky - how to record last used time? 
+#ifdef WITH_THREADS   
+    mutable boost::mutex m_transOptCacheMutex;
+#endif
 	bool m_isAlwaysCreateDirectTranslationOption;
 	//! constructor. only the 1 static variable can be created
 
 	bool m_outputWordGraph; //! whether to output word graph
-        bool m_outputSearchGraph; //! whether to output search graph
+	bool m_outputSearchGraph; //! whether to output search graph
+	bool m_outputSearchGraphExtended; //! ... in extended format
 #ifdef HAVE_PROTOBUF
 	bool m_outputSearchGraphPB; //! whether to output search graph as a protobuf
 #endif
@@ -176,9 +184,9 @@ protected:
 	//! load all generation tables as specified in ini file
 	bool LoadGenerationTables();
 	//! load decoding steps
-	bool LoadMapping();
 	bool LoadLexicalReorderingModel();
 	bool LoadGlobalLexicalModel();
+    void ReduceTransOptCache() const;   
 	
 public:
 
@@ -228,10 +236,7 @@ public:
 		return m_outputFactorOrder;
 	}
 
-	const std::vector<DecodeGraph*> &GetDecodeStepVL() const
-	{
-		return m_decodeStepVL;
-	}
+	std::vector<DecodeGraph*> GetDecodeStepVL(const InputType& source) const;
 	
 	inline bool GetSourceStartPosMattersForRecombination() const
 	{ 
@@ -352,7 +357,7 @@ public:
 	{
 		return m_phraseDictionary.size();
 	}
-	const std::vector<PhraseDictionary*> &GetPhraseDictionaries() const
+	const std::vector<PhraseDictionaryFeature*> &GetPhraseDictionaries() const
 	{
 		return m_phraseDictionary;
 	}
@@ -381,10 +386,7 @@ public:
 	{
 		return m_isDetailedTranslationReportingEnabled;
 	}
-	void ResetSentenceStats(const InputType& source) const
-	{
-		m_sentenceStats = std::auto_ptr<SentenceStats>(new SentenceStats(source));
-	}
+	
 	bool IsLabeledNBestList() const
 	{
 		return m_labeledNBestList;
@@ -430,13 +432,9 @@ public:
 	InputTypeEnum GetInputType() const {return m_inputType;}
 	SearchAlgorithm GetSearchAlgorithm() const {return m_searchAlgorithm;}
 	size_t GetNumInputScores() const {return m_numInputScores;}
-	const InputType* GetInput() const { return m_input; }
 	void InitializeBeforeSentenceProcessing(InputType const&) const;
 	void CleanUpAfterSentenceProcessing() const;
-	SentenceStats& GetSentenceStats() const
-	{
-		return *m_sentenceStats;
-	}
+	
 	const std::vector<float>& GetAllWeights() const
 	{
 		return m_allWeights;
@@ -460,7 +458,8 @@ public:
 	bool UseTimeout() const { return m_timeout; }
 	size_t GetTimeoutThreshold() const { return m_timeout_threshold; }
 	
-	size_t GetOutputSearchGraph() const { return m_outputSearchGraph; }
+	bool GetOutputSearchGraph() const { return m_outputSearchGraph; }
+	bool GetOutputSearchGraphExtended() const { return m_outputSearchGraphExtended; }
 #ifdef HAVE_PROTOBUF
 	bool GetOutputSearchGraphPB() const { return m_outputSearchGraphPB; }
 #endif
@@ -470,7 +469,7 @@ public:
 	bool GetUseTransOptCache() const { return m_useTransOptCache; }
 
 	void AddTransOptListToCache(const DecodeGraph &decodeGraph, const Phrase &sourcePhrase, const TranslationOptionList &transOptList) const;
-	void ReduceTransOptCache() const;
+	
 
 	const TranslationOptionList* FindTransOptListInCache(const DecodeGraph &decodeGraph, const Phrase &sourcePhrase) const;
 };
