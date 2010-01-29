@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <vector>
 #include <string>
 #include <sstream>
-
+#include <fstream>
 
 #include "LanguageModelMultiFactor.h"
 #include "Word.h"
@@ -67,9 +67,13 @@ protected:
 	FactoredVocab		*m_srilmVocab;
 	FNgram 					*m_srilmModel;
 	VocabIndex	m_unknownId;
+	VocabIndex  m_wtid;
+	VocabIndex  m_wtbid;
+	VocabIndex  m_wteid;
   FNgramSpecs<FNgramCount>* fnSpecs;
 	//std::vector<VocabIndex> m_lmIdLookup;
 	std::map<size_t, VocabIndex>* lmIdMap;
+	std::fstream* debugStream;
 
   WidMatrix *widMatrix;
 
