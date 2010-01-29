@@ -252,7 +252,7 @@ if ($___LAST_STEP == 9) {
     my ($f, $order, $filename);
     ($f, $order, $filename, $type) = split /:/, $lm, 4;
     die "ERROR: Wrong format of --lm. Expected: --lm factor:order:filename"
-      if $f !~ /^[0-9]+$/ || $order !~ /^[0-9]+$/ || !defined $filename;
+      if $f !~ /^[0-9,]+$/ || $order !~ /^[0-9]+$/ || !defined $filename;
     die "ERROR: Filename is not absolute: $filename"
       unless file_name_is_absolute $filename;
     die "ERROR: Language model file not found or empty: $filename"

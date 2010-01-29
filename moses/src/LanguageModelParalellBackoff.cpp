@@ -58,8 +58,6 @@ bool LanguageModelParalellBackoff::Load(const std::string &filePath, const std::
     m_srilmVocab = new ::FactoredVocab();
     //assert(m_srilmVocab != 0);
 
-    cerr << "m_srilmVocab" << (int)m_srilmVocab << "\n";
-
     fnSpecs = 0; 
     File f(filePath.c_str(),"r");
     fnSpecs = new ::FNgramSpecs<FNgramCount>(f,*m_srilmVocab, 0/*debug*/);
