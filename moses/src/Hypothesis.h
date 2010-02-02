@@ -92,6 +92,8 @@ protected:
 	Hypothesis(Manager& manager, InputType const& source, const TargetPhrase &emptyTarget);
 	/*! used when creating a new hypothesis using a translation option (phrase translation) */
 	Hypothesis(const Hypothesis &prevHypo, const TranslationOption &transOpt);
+  /*! allocate a new hypothesis and call the constructor */
+	static Hypothesis* AllocateAndConstruct(const Hypothesis &prevHypo, const TranslationOption &transOpt);
 
 public:
 	static ObjectPool<Hypothesis> &GetObjectPool()

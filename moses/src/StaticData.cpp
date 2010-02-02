@@ -342,7 +342,7 @@ bool StaticData::LoadData(Parameter *parameter)
       cerr << "Can use -constraint only with stack-based search (-search-algorithm 0)" << endl;
       exit(1);
     }
-		m_constraintFileName = m_parameter->GetParam("constraint")[0];		
+		m_constraintFileName = m_parameter->GetParam("constraint")[0];
 	
 	  InputFileStream constraintFile(m_constraintFileName);
 	
@@ -369,6 +369,16 @@ bool StaticData::LoadData(Parameter *parameter)
 				assert(false);
 			}
 		}
+
+    const vector<string> replacementPenaltyWeightStr = m_parameter->GetParam("constraint-word-replacement-penalty");
+    if (replacementPenaltyWeightStr.size()) {
+      m_weightContraintWordReplacement = Scan<float>(replacementPenaltyWeightStr[0]);
+	    m_constraintWordReplacementPenaltyProducer = new ConstraintWordReplacementPenaltyProducer(m_scoreIndexManager);
+	    m_allWeights.push_back(m_weightContraintWordReplacement);
+      m_constraintAllowReplacement = true;
+    } else {
+      m_constraintAllowReplacement = false;
+    }
 	}
 
 	// to cube or not to cube
@@ -447,6 +457,9 @@ StaticData::~StaticData()
 	delete m_distortionScoreProducer;
 	delete m_wpProducer;
 	delete m_unknownWordPenaltyProducer;
+  if (m_constraintWordReplacementPenaltyProducer) {
+    delete m_constraintWordReplacementPenaltyProducer;
+  }
 
 	// memory pools
 	Phrase::FinalizeMemPool();

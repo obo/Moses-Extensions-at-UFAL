@@ -65,6 +65,20 @@ public:
 
 };
 
+/** penalty for word replacement in constraint search */
+class ConstraintWordReplacementPenaltyProducer : public StatelessFeatureFunction {
+public:
+	ConstraintWordReplacementPenaltyProducer(ScoreIndexManager &scoreIndexManager);
+
+	size_t GetNumScoreComponents() const;
+	std::string GetScoreProducerDescription() const;
+	std::string GetScoreProducerWeightShortName() const;
+	size_t GetNumInputScores() const;
+
+	virtual bool ComputeValueInTranslationOption() const;
+
+};
+
 }
 
 #endif

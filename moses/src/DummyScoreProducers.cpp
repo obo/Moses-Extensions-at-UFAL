@@ -97,6 +97,7 @@ FFState* DistortionScoreProducer::Evaluate(
   return res;
 }
 
+/* word penalty producer */
 
 WordPenaltyProducer::WordPenaltyProducer(ScoreIndexManager &scoreIndexManager)
 {
@@ -125,6 +126,8 @@ void WordPenaltyProducer::Evaluate(const TargetPhrase& tp, ScoreComponentCollect
   out->PlusEquals(this, -static_cast<float>(tp.GetSize()));
 }
 
+/* unknown word penalty producer */
+
 UnknownWordPenaltyProducer::UnknownWordPenaltyProducer(ScoreIndexManager &scoreIndexManager)
 {
 	scoreIndexManager.AddScoreProducer(this);
@@ -148,6 +151,34 @@ std::string UnknownWordPenaltyProducer::GetScoreProducerWeightShortName() const
 size_t UnknownWordPenaltyProducer::GetNumInputScores() const { return 0;}
 
 bool UnknownWordPenaltyProducer::ComputeValueInTranslationOption() const {
+  return true;
+}
+
+/* penalty for constraint search */
+
+ConstraintWordReplacementPenaltyProducer::ConstraintWordReplacementPenaltyProducer(ScoreIndexManager &scoreIndexManager)
+{
+	scoreIndexManager.AddScoreProducer(this);
+}
+
+size_t ConstraintWordReplacementPenaltyProducer::GetNumScoreComponents() const
+{
+	return 1;
+}
+
+std::string ConstraintWordReplacementPenaltyProducer::GetScoreProducerDescription() const
+{
+	return "ConstraintWordReplacementPenalty";
+}
+
+std::string ConstraintWordReplacementPenaltyProducer::GetScoreProducerWeightShortName() const
+{
+	return "cwr";
+}
+
+size_t ConstraintWordReplacementPenaltyProducer::GetNumInputScores() const { return 0;}
+
+bool ConstraintWordReplacementPenaltyProducer::ComputeValueInTranslationOption() const {
   return true;
 }
 

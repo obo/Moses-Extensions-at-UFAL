@@ -57,6 +57,7 @@ class DistortionScoreProducer;
 class WordPenaltyProducer;
 class DecodeStep;
 class UnknownWordPenaltyProducer;
+class ConstraintWordReplacementPenaltyProducer;
 
 /** Contains global variables and contants */
 class StaticData
@@ -66,6 +67,7 @@ private:
 protected:	
 
 	std::map<long,Phrase> m_constraints;
+  bool m_constraintAllowReplacement;
 	std::vector<PhraseDictionaryFeature*>	m_phraseDictionary;
 	std::vector<GenerationDictionary*>	m_generationDictionary;
 	Parameter			*m_parameter;
@@ -83,6 +85,7 @@ protected:
 		m_translationOptionThreshold,
 		m_weightDistortion, 
 		m_weightWordPenalty, 
+		m_weightContraintWordReplacement, 
 		m_wordDeletionWeight,
 		m_weightUnknownWord;
 									// PhraseTrans, Generation & LanguageModelScore has multiple weights.
@@ -124,6 +127,7 @@ protected:
 	DistortionScoreProducer *m_distortionScoreProducer;
 	WordPenaltyProducer *m_wpProducer;
 	UnknownWordPenaltyProducer *m_unknownWordPenaltyProducer;
+	ConstraintWordReplacementPenaltyProducer *m_constraintWordReplacementPenaltyProducer;
 	bool m_reportSegmentation;
 	bool m_reportAllFactors;
 	bool m_isDetailedTranslationReportingEnabled;
@@ -267,6 +271,10 @@ public:
 			return NULL;
 		}
 	}
+  inline const bool GetConstraintAllowReplacement() const
+  {
+    return m_constraintAllowReplacement;
+  }
 	inline size_t GetMaxPhraseLength() const 
 	{ 
 		return m_maxPhraseLength;
@@ -442,6 +450,7 @@ public:
 	const DistortionScoreProducer *GetDistortionScoreProducer() const { return m_distortionScoreProducer; }
 	const WordPenaltyProducer *GetWordPenaltyProducer() const { return m_wpProducer; }
 	const UnknownWordPenaltyProducer *GetUnknownWordPenaltyProducer() const { return m_unknownWordPenaltyProducer; }
+	const ConstraintWordReplacementPenaltyProducer *GetConstraintWordReplacementPenaltyProducer() const { return m_constraintWordReplacementPenaltyProducer; }
 
 	bool UseAlignmentInfo() const {	return m_UseAlignmentInfo;}
 	void UseAlignmentInfo(bool a){ m_UseAlignmentInfo=a; };
