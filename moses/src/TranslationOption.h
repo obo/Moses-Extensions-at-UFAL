@@ -88,8 +88,8 @@ public:
 	/** copy constructor, but change words range. used by caching */
 	TranslationOption(const TranslationOption &copy, const WordsRange &sourceWordsRange);
 
-	/** copy constructor, but change output words and apply constraint word replacement penalty, used for constraint search */
-	TranslationOption(const TranslationOption &copy, const Phrase &constrainingPhrase);
+	/** apply constraint word replacement penalty, used for constraint search */
+	void ConstrainToMatchPhrase(const Phrase &constrainingPhrase);
 
 	~TranslationOption()
 	{
