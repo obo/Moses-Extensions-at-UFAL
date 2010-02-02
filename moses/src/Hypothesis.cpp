@@ -157,6 +157,15 @@ Hypothesis* Hypothesis::CreateNext(const TranslationOption &transOpt, const Phra
 	return Create(*this, transOpt, constraint);
 }
 
+Hypothesis* Hypothesis::AllocateAndConstruct(const Hypothesis &prevHypo, const TranslationOption &transOpt) {
+		#ifdef USE_HYPO_POOL
+			Hypothesis *ptr = s_objectPool.getPtr();
+			return new(ptr) Hypothesis(prevHypo, transOpt);
+		#else
+			return new Hypothesis(prevHypo, transOpt);
+		#endif
+}
+
 /***
  * return the subclass of Hypothesis most appropriate to the given translation option
  */
@@ -164,12 +173,12 @@ Hypothesis* Hypothesis::Create(const Hypothesis &prevHypo, const TranslationOpti
 {
 
 	// This method includes code for constraint decoding
-	
-	bool createHypothesis = true;
+	// If the previous hypothesis plus the proposed translation option
+	//    fail to match the provided constraint,
+	//    return a null hypothesis.
 
 	if (constrainingPhrase != NULL)
 	{
-
 		size_t constraintSize = constrainingPhrase->GetSize();
 			
 		size_t start = 1 + prevHypo.GetCurrTargetWordsRange().GetEndPos();
@@ -179,45 +188,33 @@ Hypothesis* Hypothesis::Create(const Hypothesis &prevHypo, const TranslationOpti
 		
 		size_t endpoint = start + transOptSize - 1;
 		
-
 		if (endpoint < constraintSize) 
 		{	
 			WordsRange range(start, endpoint);
 			Phrase relevantConstraint = constrainingPhrase->GetSubString(range);
-			
-			if ( ! relevantConstraint.IsCompatible(transOptPhrase) )
-			{
-				createHypothesis = false;
-				
+
+      if (StaticData::Instance().GetConstraintAllowReplacement())
+      { // allow word substitution
+        TranslationOption useTransOpt = TranslationOption(transOpt, relevantConstraint);
+        // TODO: dispose of old transOpt?
+        TRACE_ERR("Allocating hypo using " << useTransOpt << endl);
+        return AllocateAndConstruct(prevHypo, useTransOpt);
 			}
+      else
+      { // allow word substituion only with exact match
+  			if ( ! relevantConstraint.IsCompatible(transOptPhrase) )
+  			{
+  				return NULL;
+  			}
+      }
 		}
 		else 
 		{
-			createHypothesis = false;
+  		return NULL;
 		}
-		
 	}
 
-	
-	if (createHypothesis)
-	{
-
-		#ifdef USE_HYPO_POOL
-			Hypothesis *ptr = s_objectPool.getPtr();
-			return new(ptr) Hypothesis(prevHypo, transOpt);
-		#else
-			return new Hypothesis(prevHypo, transOpt);
-		#endif
-
-	}
-	else
-	{
-		// If the previous hypothesis plus the proposed translation option
-		//    fail to match the provided constraint,
-		//    return a null hypothesis.
-		return NULL;
-	}
-	
+  return AllocateAndConstruct(prevHypo, transOpt);
 }
 /***
  * return the subclass of Hypothesis most appropriate to the given target phrase

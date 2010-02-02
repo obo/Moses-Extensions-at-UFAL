@@ -105,6 +105,52 @@ TranslationOption::TranslationOption(const TranslationOption &copy, const WordsR
 , m_reordering(copy.m_reordering)
 {}
 
+TranslationOption::TranslationOption(const TranslationOption &copy, const Phrase &constrainingPhrase)
+: m_targetPhrase(copy.m_targetPhrase)
+//, m_sourcePhrase(new Phrase(*copy.m_sourcePhrase)) // TODO use when confusion network trans opt for confusion net properly implemented 
+, m_sourcePhrase( (copy.m_sourcePhrase == NULL) ? new Phrase(Input) : new Phrase(*copy.m_sourcePhrase))
+, m_sourceWordsRange(copy.m_sourceWordsRange)
+, m_futureScore(copy.m_futureScore)
+, m_scoreBreakdown(copy.m_scoreBreakdown)
+, m_reordering(copy.m_reordering)
+{
+  // count (and mark?) the words in the transOpt not compatible with
+  // the constraint
+/*  TRACE_ERR("Constructing to match: " << constrainingPhrase << endl);*/
+/*  TRACE_ERR("          considering: " << m_targetPhrase << endl);*/
+	unsigned int useFactor = 0; // peek only at factor 0
+  size_t transOptSize = m_targetPhrase.GetSize();
+  unsigned int wordsReplaced = 0;
+	for (size_t currPos = 0 ; currPos < transOptSize ; currPos++)
+	{
+		FactorType factorType = static_cast<FactorType>(useFactor);
+		const Factor *transOptFactor
+	    = m_targetPhrase.GetFactor(currPos, factorType);
+		const Factor *constraintFactor
+	    = constrainingPhrase.GetFactor(currPos, factorType);
+/*    TRACE_ERR("  transOptFactor " << *transOptFactor << endl);*/
+/*    TRACE_ERR("  constraintFactor " << *constraintFactor << endl);*/
+	
+	  assert(transOptFactor); // we expect a phrase
+	  assert(constraintFactor); // we expect a phrase
+		if (transOptFactor != constraintFactor)
+	  {
+		  wordsReplaced++;
+		}
+	}
+/*  TRACE_ERR("       words replaced: " << wordsReplaced << endl);*/
+/*  TRACE_ERR("  Scores before: " << m_scoreBreakdown << endl);*/
+	const ConstraintWordReplacementPenaltyProducer *sp = StaticData::Instance().GetConstraintWordReplacementPenaltyProducer();
+	if (sp) {
+		const ScoreProducer *scoreProducer = (const ScoreProducer *)sp;
+		vector<float> score(1);
+		score[0] = -1.0*wordsReplaced;
+/*    TRACE_ERR("      new value: " << score[0] << endl);*/
+		m_scoreBreakdown.PlusEquals(scoreProducer, score);
+	}
+/*  TRACE_ERR("   Scores after: " << m_scoreBreakdown << endl);*/
+}
+
 void TranslationOption::MergeNewFeatures(const Phrase& phrase, const ScoreComponentCollection& score, const std::vector<FactorType>& featuresToAdd)
 {
 	assert(phrase.GetSize() == m_targetPhrase.GetSize());
