@@ -195,9 +195,8 @@ Hypothesis* Hypothesis::Create(const Hypothesis &prevHypo, const TranslationOpti
 
       if (StaticData::Instance().GetConstraintAllowReplacement())
       { // allow word substitution
-        TranslationOption useTransOpt = TranslationOption(transOpt, relevantConstraint);
-        // TODO: dispose of old transOpt?
-        TRACE_ERR("Allocating hypo using " << useTransOpt << endl);
+        transOpt.ConstrainToMatchPhrase(relevantConstraint);
+        TRACE_ERR("Allocating hypo using " << transOpt << endl);
         return AllocateAndConstruct(prevHypo, useTransOpt);
 			}
       else
