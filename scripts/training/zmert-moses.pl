@@ -448,8 +448,17 @@ if( $___METRIC =~ /^SemPOS$/) {
 # 3) index of t_lemma for SemPOS 4) index of sempos for SemPOS
 # 5) max ngram for BLEU 6) ref length strategy for BLEU
 # 7) index of factor to compute BLEU on
-if( $___METRIC =~ /^SemPOS_BLEU$/) {
+elsif( $___METRIC =~ /^SemPOS_BLEU$/) {
   $___METRIC .= " 1 1 1 2 4 closest 0";
+}
+elsif( $___METRIC =~ /^BLEU$/) {
+  $___METRIC .= " 4 closest";
+}
+ elsif( $___METRIC =~ /^TER$/) {
+  $___METRIC .= " nocase punc 20 50";
+}
+elsif( $___METRIC =~ /^TER-BLEU$/) {
+  $___METRIC .= " nocase punc 20 50 4 closest";
 }
 
 if( $___EXTRACT_SEMPOS =~ /tmt/) {
@@ -592,7 +601,7 @@ while( my $line = <NBEST_ORIG>) {
   # extract factor on position $factor_index
   my @tokens = split( /\s/, $array[1]); # split sentence into words
   $array[1] = "";
-  foreach( my $token = @tokens) {
+  foreach my $token (@tokens) {
     my @factors = split( /\|/, \$token);
     $array[1] .= join( "|", $factors[$form_index], $factors[$sempos_index]);
   }
@@ -646,7 +655,11 @@ die "Error: Sent $line_count sentences to analyze but got only $line_count_check
 FILE_EOF
 
 } elsif ($___EXTRACT_SEMPOS eq "none") {
-  # no preprocessing needed
+print DECODER_CMD <<'FILE_EOF';
+  while( my $line = <NBEST_ORIG>) {
+    print NBEST $line;
+  }
+FILE_EOF
 } else {
   die "Unknown type of factor extraction: $___EXTRACT_SEMPOS";
 }
