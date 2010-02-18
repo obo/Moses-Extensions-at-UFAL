@@ -227,16 +227,29 @@ void IOWrapper::Backtrack(const Hypothesis *hypo){
 	}
 }
 				
-void IOWrapper::OutputBestHypo(const std::vector<const Factor*>&  mbrBestHypo, long /*translationId*/, bool reportSegmentation, bool reportAllFactors)
+void OutputBestHypo(const std::vector<const Factor*>&  mbrBestHypo, long /*translationId*/, bool reportSegmentation, bool reportAllFactors, ostream& out)
 {
 	for (size_t i = 0 ; i < mbrBestHypo.size() ; i++)
 	{
 		const Factor *factor = mbrBestHypo[i];
-		if (i>0) cout << " ";
-			cout << factor->GetString();
+		if (i>0) out << " ";
+			out << factor->GetString();
 	}
-	cout << endl;
+	out << endl;
 }													 
+
+void OutputBestHypo(const std::vector<Word>&  mbrBestHypo, long /*translationId*/, bool reportSegmentation, bool reportAllFactors, ostream& out)
+{
+  
+	for (size_t i = 0 ; i < mbrBestHypo.size() ; i++)
+	{
+        const Factor *factor = mbrBestHypo[i].GetFactor(StaticData::Instance().GetOutputFactorOrder()[0]);
+	    if (i>0) out << " ";
+            out << *factor;
+	}
+	out << endl;
+}		
+
 
 void OutputInput(std::vector<const Phrase*>& map, const Hypothesis* hypo)
 {
@@ -291,6 +304,7 @@ void OutputNBest(std::ostream& out, const Moses::TrellisPathList &nBestList, con
 {
 	const StaticData &staticData = StaticData::Instance();
 	bool labeledOutput = staticData.IsLabeledNBestList();
+	bool reportAllFactors = staticData.GetReportAllFactorsNBest();
 	bool includeAlignment = staticData.NBestIncludesAlignment();
 	bool includeWordAlignment = staticData.PrintAlignmentInfoInNbest();
 	
@@ -305,7 +319,7 @@ void OutputNBest(std::ostream& out, const Moses::TrellisPathList &nBestList, con
 		for (int currEdge = (int)edges.size() - 1 ; currEdge >= 0 ; currEdge--)
 		{
 			const Hypothesis &edge = *edges[currEdge];
-			OutputSurface(out, edge.GetCurrTargetPhrase(), outputFactorOrder, false); // false for not reporting all factors
+			OutputSurface(out, edge.GetCurrTargetPhrase(), outputFactorOrder, reportAllFactors);
 		}
 		out << " |||";
 

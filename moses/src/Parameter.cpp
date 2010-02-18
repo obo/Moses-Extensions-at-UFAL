@@ -62,6 +62,7 @@ Parameter::Parameter()
 	AddParam("output-factors", "list of factors in the output");
 	AddParam("phrase-drop-allowed", "da", "if present, allow dropping of source words"); //da = drop any (word); see -du for comparison
 	AddParam("report-all-factors", "report all factors in output, not just first");
+	AddParam("report-all-factors-in-n-best", "Report all factors in n-best-lists. Default is false");
 	AddParam("report-segmentation", "t", "report phrase segmentation in the output");
 	AddParam("stack", "s", "maximum stack size for histogram pruning");
 	AddParam("stack-diversity", "sd", "minimum number of hypothesis of each coverage in stack (default 0)");
@@ -94,6 +95,8 @@ Parameter::Parameter()
  	AddParam("mbr-scale", "scaling factor to convert log linear score probability in MBR decoding (default 1.0)");
   AddParam("lmbr-thetas", "theta(s) for lattice mbr calculation");
   AddParam("lmbr-pruning-factor", "average number of nodes/word wanted in pruned lattice");
+  AddParam("lmbr-p", "unigram precision value for lattice mbr");
+  AddParam("lmbr-r", "ngram precision decay value for lattice mbr");
   AddParam("lattice-hypo-set", "to use lattice as hypo set during lattice MBR");
 	AddParam("use-persistent-cache", "cache translation options across sentences (default true)");
 	AddParam("persistent-cache-size", "maximum size of cache for translation options (default 10,000 input phrases)");

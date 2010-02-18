@@ -130,6 +130,7 @@ protected:
 	ConstraintWordReplacementPenaltyProducer *m_constraintWordReplacementPenaltyProducer;
 	bool m_reportSegmentation;
 	bool m_reportAllFactors;
+	bool m_reportAllFactorsNBest;
 	bool m_isDetailedTranslationReportingEnabled;
 	bool m_onlyDistinctNBest;
 	bool m_computeLMBackoffStats;
@@ -151,6 +152,9 @@ protected:
   size_t m_lmbrPruning; //! average number of nodes per word wanted in pruned lattice
   vector<float> m_lmbrThetas; //! theta(s) for lattice mbr calculation
   bool m_useLatticeHypSetForLatticeMBR; //! to use nbest as hypothesis set during lattice MBR
+  float m_lmbrPrecision; //! unigram precision theta - see Tromble et al 08 for more details
+  float m_lmbrPRatio; //! decaying factor for ngram thetas - see Tromble et al 08 for more details
+    
 
 	bool m_timeout; //! use timeout
 	size_t m_timeout_threshold; //! seconds after which time out is activated
@@ -394,6 +398,10 @@ public:
 	{
 		return m_reportAllFactors;
 	}
+	bool GetReportAllFactorsNBest() const
+	{
+		return m_reportAllFactorsNBest;
+	}
 	bool IsDetailedTranslationReportingEnabled() const
 	{
 		return m_isDetailedTranslationReportingEnabled;
@@ -471,7 +479,12 @@ public:
   size_t GetLatticeMBRPruningFactor() const { return m_lmbrPruning; }
   const vector<float>& GetLatticeMBRThetas() const {return m_lmbrThetas;}
   bool  UseLatticeHypSetForLatticeMBR() const { return m_useLatticeHypSetForLatticeMBR;}
-  
+  float GetLatticeMBRPrecision() const {
+    return m_lmbrPrecision;
+  }
+  float GetLatticeMBRPRatio() const {
+    return m_lmbrPRatio;
+  }
   
 	bool UseTimeout() const { return m_timeout; }
 	size_t GetTimeoutThreshold() const { return m_timeout_threshold; }
