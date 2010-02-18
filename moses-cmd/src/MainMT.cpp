@@ -35,6 +35,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "Hypothesis.h"
 #include "IOWrapper.h"
+#include "LatticeMBR.h"
 #include "Manager.h"
 #include "StaticData.h"
 #include "ThreadPool.h"
@@ -119,34 +120,45 @@ class TranslationTask : public Task {
                 const Hypothesis* bestHypo = NULL;
                 if (!staticData.UseMBR()) {
                     bestHypo = manager.GetBestHypothesis();
+                    if (bestHypo) {
+                        OutputSurface(
+                                out,
+                                bestHypo,
+                                staticData.GetOutputFactorOrder(), 
+                                staticData.GetReportSegmentation(),
+                                staticData.GetReportAllFactors());
+                        IFVERBOSE(1) {
+                            debug << "BEST TRANSLATION: " << *bestHypo << endl;
+                        }
+                    }
+                    out << endl;
                 } else {
-                    //MBR decoding
                     size_t nBestSize = staticData.GetMBRSize();
                     if (nBestSize <= 0) {
                         cerr << "ERROR: negative size for number of MBR candidate translations not allowed (option mbr-size)" << endl;
                         exit(1);
+                    } 
+                    
+                    if (staticData.UseLatticeMBR()) {
+                        //Lattice MBR decoding
+                        vector<Word> mbrBestHypo = doLatticeMBR(manager); 
+                        OutputBestHypo(mbrBestHypo, m_lineNumber, staticData.GetReportSegmentation(),
+                                       staticData.GetReportAllFactors(),out);
+                        IFVERBOSE(2) { PrintUserTime("finished Lattice MBR decoding"); }
                     } else {
+                        //MBR decoding
                         TrellisPathList nBestList;
                         manager.CalcNBest(nBestSize, nBestList,true);
                         VERBOSE(2,"size of n-best: " << nBestList.GetSize() << " (" << nBestSize << ")" << endl);
                         IFVERBOSE(2) { PrintUserTime("calculated n-best list for MBR decoding"); }
-                        bestHypo = doMBR(nBestList)->GetEdges().at(0);
+                        std::vector<const Factor*> mbrBestHypo = doMBR(nBestList);
+                        OutputBestHypo(mbrBestHypo, m_lineNumber,
+                                    staticData.GetReportSegmentation(),
+                                    staticData.GetReportAllFactors(),out);
                         IFVERBOSE(2) { PrintUserTime("finished MBR decoding"); }
+                        
                     }
                 }
-                if (bestHypo) {
-                    OutputSurface(
-                            out,
-                            bestHypo,
-                            staticData.GetOutputFactorOrder(), 
-                            staticData.GetReportSegmentation(),
-                            staticData.GetReportAllFactors());
-                    IFVERBOSE(1) {
-                      debug << "BEST TRANSLATION: " << *bestHypo << endl;
-                    }
-                }
-                out << endl;
-
                 m_outputCollector->Write(m_lineNumber,out.str(),debug.str());
             }
             if (m_nbestCollector) {
