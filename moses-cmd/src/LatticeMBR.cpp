@@ -77,6 +77,7 @@ void pruneLatticeFB(Lattice & connectedHyp, map < const Hypothesis*, set <const 
                     const vector< float> & estimatedScores, size_t edgeDensity) {
   
   //Need hyp 0 in connectedHyp - Find empty hypothesis
+  VERBOSE(2,"Pruning lattice to edge density " << edgeDensity << endl);
   const Hypothesis* emptyHyp = connectedHyp.at(0);
   while (emptyHyp->GetId() != 0) {
     emptyHyp = emptyHyp->GetPrevHypo();
@@ -113,6 +114,7 @@ void pruneLatticeFB(Lattice & connectedHyp, map < const Hypothesis*, set <const 
   
   size_t numEdgesTotal = edgeDensity * connectedHyp[0]->GetWordsBitmap().GetSize();
   size_t numEdgesCreated = 0;
+  VERBOSE(2, "Target edge count: " << numEdgesTotal << endl);
 
   float prevScore = -999999;
   
@@ -200,7 +202,7 @@ void pruneLatticeFB(Lattice & connectedHyp, map < const Hypothesis*, set <const 
     connectedHyp.push_back(*it);
   }
   
-  VERBOSE(3, "Done! Num edges created : "<< numEdgesCreated << ", numEdges wanted " << numEdgesTotal << endl)
+  VERBOSE(2, "Done! Num edges created : "<< numEdgesCreated << ", numEdges wanted " << numEdgesTotal << endl)
   
   IFVERBOSE(3) {
     cerr << "Surviving hyps: " ;
@@ -315,7 +317,7 @@ void calcNgramPosteriors(Lattice & connectedHyp, map<const Hypothesis*, vector<E
   for (map<Phrase, float>::iterator finalScoresIt = finalNgramScores.begin();  finalScoresIt != finalNgramScores.end(); ++finalScoresIt) {
     finalScoresIt->second =  finalScoresIt->second * scale - Z;
     IFVERBOSE(2) {
-      cout << finalScoresIt->first << " [" << finalScoresIt->second << "]" << endl;
+      VERBOSE(2,finalScoresIt->first << " [" << finalScoresIt->second << "]" << endl);
     }
   }
   
@@ -432,11 +434,11 @@ vector<Word>  calcMBRSol(const TrellisPathList& nBestList, map<Phrase, float>& f
     }
   }
   IFVERBOSE(2) {  
-  cout << "Thetas: ";
+  VERBOSE(2,"Thetas: ");
   for (size_t i = 0; i < mbrThetas.size(); ++i) {
-    cout << mbrThetas[i] << " ";
+    VERBOSE(2,mbrThetas[i] << " ");
   }
-  cout << endl;
+  VERBOSE(2,endl);
   }
   
   float argmaxScore = -1e20;
@@ -481,10 +483,10 @@ vector<Word>  calcMBRSol(const TrellisPathList& nBestList, map<Phrase, float>& f
     if (mbrScore > argmaxScore){
       argmaxScore = mbrScore;
       IFVERBOSE(2) {
-        cout << "HYP " << ctr << " IS NEW BEST: ";
+        VERBOSE(2,"HYP " << ctr << " IS NEW BEST: ");
         for (size_t i = 0; i < translation.size(); ++i)
-          cout << translation[i]  ;
-        cout << "[" << argmaxScore << "]" << endl;    
+          VERBOSE(2,translation[i]);
+        VERBOSE(2,"[" << argmaxScore << "]" << endl);
       }
       argmaxTranslation = translation;
     }
@@ -492,7 +494,7 @@ vector<Word>  calcMBRSol(const TrellisPathList& nBestList, map<Phrase, float>& f
   return argmaxTranslation;
 }
 
-vector<Word> doLatticeMBR(Manager& manager) {
+vector<Word> doLatticeMBR(Manager& manager, TrellisPathList& nBestList) {
     const StaticData& staticData = StaticData::Instance();
     std::map < int, bool > connected;
     std::vector< const Hypothesis *> connectedList;
@@ -503,28 +505,8 @@ vector<Word> doLatticeMBR(Manager& manager) {
     manager.GetForwardBackwardSearchGraph(&connected, &connectedList, &outgoingHyps, &estimatedScores);
     pruneLatticeFB(connectedList, outgoingHyps, incomingEdges, estimatedScores, staticData.GetLatticeMBRPruningFactor());
     calcNgramPosteriors(connectedList, incomingEdges, staticData.GetMBRScale(), ngramPosteriors);      
-    vector<Word> mbrBestHypo;
-    if (!staticData.UseLatticeHypSetForLatticeMBR()) {
-        size_t nBestSize = staticData.GetMBRSize();
-        if (nBestSize <= 0)
-        {
-            cerr << "ERROR: negative size for number of MBR candidate translations not allowed (option mbr-size)" << endl;
-            exit(1);
-        }
-        else
-        {
-            TrellisPathList nBestList;
-            manager.CalcNBest(nBestSize, nBestList,true);
-            VERBOSE(2,"size of n-best: " << nBestList.GetSize() << " (" << nBestSize << ")" << endl);
-            IFVERBOSE(2) { PrintUserTime("calculated n-best list for MBR decoding"); }
-            mbrBestHypo = calcMBRSol(nBestList, ngramPosteriors, staticData.GetLatticeMBRThetas(), 
-                                     staticData.GetLatticeMBRPrecision(), staticData.GetLatticeMBRPRatio());
-        }
-    }  
-    else {
-        cerr << "Using Lattice for Hypothesis set not yet implemented" << endl;
-        exit(1);
-    }
+    vector<Word> mbrBestHypo = calcMBRSol(nBestList, ngramPosteriors, staticData.GetLatticeMBRThetas(), 
+            staticData.GetLatticeMBRPrecision(), staticData.GetLatticeMBRPRatio());
     return mbrBestHypo;
 }
 
