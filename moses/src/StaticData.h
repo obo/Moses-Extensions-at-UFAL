@@ -194,7 +194,8 @@ protected:
 	//! load decoding steps
 	bool LoadLexicalReorderingModel();
 	bool LoadGlobalLexicalModel();
-    void ReduceTransOptCache() const;   
+    void ReduceTransOptCache() const;
+	bool m_continuePartialTranslation;
 	
 public:
 
@@ -494,6 +495,8 @@ public:
 	
 
 	const TranslationOptionList* FindTransOptListInCache(const DecodeGraph &decodeGraph, const Phrase &sourcePhrase) const;
+
+	bool ContinuePartialTranslation() const { return m_continuePartialTranslation; }
 };
 
 }
