@@ -41,6 +41,7 @@ Parameter::Parameter()
 {
 	AddParam("beam-threshold", "b", "threshold for threshold pruning");
 	AddParam("config", "f", "location of the configuration file");
+	AddParam("continue-partial-translation", "cpt", "TODO - write info");
 	AddParam("drop-unknown", "du", "drop unknown words instead of copying them");
 	AddParam("factor-delimiter", "fd", "specify a different factor delimiter than the default");
 	AddParam("generation-file", "location and properties of the generation table");

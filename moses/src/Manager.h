@@ -19,7 +19,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_Manager_h
+#define moses_Manager_h
 
 #include <vector>
 #include <list>
@@ -80,7 +81,7 @@ class Manager
   void operator=(Manager const&);
 protected:	
 	// data
-	InputType const& m_source; /**< source sentence to be translated */
+//	InputType const& m_source; /**< source sentence to be translated */
 	TranslationOptionCollection *m_transOptColl; /**< pre-computed list of translation options for the phrases in this sentence */
 	Search *m_search;
 	
@@ -96,6 +97,7 @@ protected:
   
 		
 public:
+	InputType const& m_source; /**< source sentence to be translated */
 	Manager(InputType const& source, SearchAlgorithm searchAlgorithm);
 	~Manager();
   
@@ -134,3 +136,4 @@ public:
 };
 
 }
+#endif

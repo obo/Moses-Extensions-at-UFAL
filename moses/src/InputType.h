@@ -20,7 +20,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_InputType_h
+#define moses_InputType_h
 
 #include <string>
 #include "TypeDef.h"
@@ -46,6 +47,9 @@ protected:
 	ReorderingConstraint m_reorderingConstraint; /**< limits on reordering specified either by "-mp" switch or xml tags */
  
 public:
+
+	std::vector<bool> translated_words;
+	std::string translated_target;
 
 	InputType(long translationId = 0);
 	virtual ~InputType();
@@ -128,3 +132,4 @@ std::ostream& operator<<(std::ostream&,InputType const&);
 
 }
 
+#endif

@@ -19,7 +19,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_TargetPhrase_h
+#define moses_TargetPhrase_h
 
 #include <vector>
 #include "TypeDef.h"
@@ -58,6 +59,7 @@ protected:
 	
 public:
 		TargetPhrase(FactorDirection direction=Output);
+		TargetPhrase(FactorDirection direction, std::string out_string);
 		~TargetPhrase(){};
 		
 	/** used by the unknown word handler.
@@ -157,3 +159,4 @@ std::ostream& operator<<(std::ostream&, const TargetPhrase&);
 
 }
 
+#endif
