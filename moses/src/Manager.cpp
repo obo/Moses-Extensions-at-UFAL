@@ -34,6 +34,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "TrellisPath.h"
 #include "TrellisPathCollection.h"
 #include "TranslationOption.h"
+#include "LexicalReordering.h"
 #include "LMList.h"
 #include "TranslationOptionCollection.h"
 #include "DummyScoreProducers.h"
@@ -101,6 +102,92 @@ void Manager::ProcessSentence()
 	VERBOSE(1, "Search took " << ((clock()-m_start)/(float)CLOCKS_PER_SEC) << " seconds" << endl);
     RemoveAllInColl(decodeStepVL);  
 }
+	
+/**
+ * Print all derivations in search graph. Note: The number of derivations is exponential in the sentence length
+ *
+ */
+
+void Manager::PrintAllDerivations(long translationId ) const
+{
+	const std::vector < HypothesisStack* > &hypoStackColl = m_search->GetHypothesisStacks();
+
+	vector<const Hypothesis*> sortedPureHypo = hypoStackColl.back()->GetSortedList();
+
+	if (sortedPureHypo.size() == 0)
+		return;
+
+  float remainingScore = 0;
+  vector<const TargetPhrase*> remainingPhrases;
+    
+	// add all pure paths
+	vector<const Hypothesis*>::const_iterator iterBestHypo;
+	for (iterBestHypo = sortedPureHypo.begin() 
+			; iterBestHypo != sortedPureHypo.end()
+			; ++iterBestHypo)
+	{
+		printThisHypothesis(translationId, *iterBestHypo, remainingPhrases, remainingScore); 
+    printDivergentHypothesis(translationId, *iterBestHypo, remainingPhrases, remainingScore);
+  }
+}
+
+
+void Manager::printDivergentHypothesis(long translationId, const Hypothesis* hypo, const vector <const TargetPhrase*> & remainingPhrases, float remainingScore  ) const
+{
+   //Backtrack from the predecessor
+   if (hypo->GetId()  > 0) {
+     vector <const TargetPhrase*> followingPhrases;
+     followingPhrases.push_back(& (hypo->GetCurrTargetPhrase()));
+     ///((Phrase) hypo->GetPrevHypo()->GetTargetPhrase());
+     followingPhrases.insert(followingPhrases.end()--, remainingPhrases.begin(), remainingPhrases.end());
+     printDivergentHypothesis(translationId, hypo->GetPrevHypo(), followingPhrases , remainingScore + hypo->GetScore() - hypo->GetPrevHypo()->GetScore());
+   }
+  
+   //Process the arcs
+   const ArcList *pAL = hypo->GetArcList();
+   if (pAL) {
+     const ArcList &arcList = *pAL;
+     // every possible Arc to replace this edge
+     ArcList::const_iterator iterArc;
+		 for (iterArc = arcList.begin() ; iterArc != arcList.end() ; ++iterArc)
+     {
+				const Hypothesis *loserHypo = *iterArc;
+				const Hypothesis* loserPrevHypo = loserHypo->GetPrevHypo();
+        float arcScore = loserHypo->GetScore() - loserPrevHypo->GetScore(); 
+        vector <const TargetPhrase* > followingPhrases;
+        followingPhrases.push_back(&(loserHypo->GetCurrTargetPhrase()));
+        followingPhrases.insert(followingPhrases.end()--, remainingPhrases.begin(), remainingPhrases.end());
+        printThisHypothesis(translationId, loserPrevHypo, followingPhrases, remainingScore + arcScore);
+        printDivergentHypothesis(translationId, loserPrevHypo, followingPhrases, remainingScore + arcScore);
+     }
+   }
+}
+
+
+void Manager::printThisHypothesis(long translationId, const Hypothesis* hypo, const vector <const TargetPhrase*> & remainingPhrases, float remainingScore  ) const
+{
+
+  cerr << translationId << " ||| ";
+  
+  //Yield of this hypothesis
+  hypo->ToStream(cerr);
+  for (size_t p = 0; p < remainingPhrases.size(); ++p) {
+    const TargetPhrase * phrase = remainingPhrases[p];
+    size_t size = phrase->GetSize();
+    for (size_t pos = 0 ; pos < size ; pos++)
+    {
+		  const Factor *factor = phrase->GetFactor(pos, 0);
+			cerr << *factor;
+      cerr << " ";
+    }
+  }
+  
+  cerr << "||| " << hypo->GetScore() + remainingScore;
+  cerr << endl;
+}
+
+  
+
 
 /**
  * After decoding, the hypotheses in the stacks and additional arcs
@@ -146,19 +233,24 @@ void Manager::CalcNBest(size_t count, TrellisPathList &ret,bool onlyDistinct) co
 		// get next best from list of contenders
 		TrellisPath *path = contenders.pop();
 		assert(path);
+		// create deviations from current best
+		path->CreateDeviantPaths(contenders);		
 		if(onlyDistinct)
 		{
 			Phrase tgtPhrase = path->GetSurfacePhrase();
-			if (distinctHyps.insert(tgtPhrase).second) 
+			if (distinctHyps.insert(tgtPhrase).second)
+      {
         ret.Add(path);
+      } else {
+        delete path;
+        path = NULL;
+      }
 		}
 		else 
     {
 		  ret.Add(path);
     }
  
-		// create deviations from current best
-		path->CreateDeviantPaths(contenders);		
 
 		if(onlyDistinct)
 		{
@@ -172,6 +264,9 @@ void Manager::CalcNBest(size_t count, TrellisPathList &ret,bool onlyDistinct) co
 		}
 	}
 }
+  
+  
+  
 
 void Manager::CalcDecoderStatistics() const 
 {

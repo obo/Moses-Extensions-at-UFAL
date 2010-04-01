@@ -71,7 +71,7 @@ Hypothesis::Hypothesis(Manager& manager, InputType const& source, const TargetPh
 	ResetScore();
 	const vector<const StatefulFeatureFunction*>& ffs = StaticData::Instance().GetScoreIndexManager().GetStatefulFeatureFunctions();
 	for (unsigned i = 0; i < ffs.size(); ++i)
-	  m_ffStates[i] = ffs[i]->EmptyHypothesisState();
+	  m_ffStates[i] = ffs[i]->EmptyHypothesisState(source);
 }
 
 /***
@@ -326,13 +326,6 @@ float Hypothesis::CalcExpectedScore( const SquareMatrix &futureScore ) {
 	// FUTURE COST
 	m_futureScore = futureScore.CalcFutureScore( m_sourceCompleted );
 
-	//LEXICAL REORDERING COST
-	const std::vector<LexicalReordering*> &reorderModels = staticData.GetReorderModels();
-	for(unsigned int i = 0; i < reorderModels.size(); i++)
-	{
-		m_scoreBreakdown.PlusEquals(reorderModels[i], reorderModels[i]->CalcScore(this));
-	}
-
 	// TOTAL
 	float total = m_scoreBreakdown.InnerProduct(staticData.GetAllWeights()) + m_futureScore + estimatedLMScore;
 
@@ -500,12 +493,6 @@ std::string Hypothesis::GetTargetPhraseStringRep() const
 		allFactors.push_back(i);
 	}
 	return GetTargetPhraseStringRep(allFactors);
-}
-
-
-const ScoreComponentCollection &Hypothesis::GetCachedReorderingScore() const
-{
-	return m_transOpt->GetReorderingScore();
 }
 
 }

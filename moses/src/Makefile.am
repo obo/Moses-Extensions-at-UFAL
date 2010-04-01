@@ -45,6 +45,7 @@ libmoses_la_HEADERS = \
 	TrellisPathList.h \
 	TrellisPathCollection.h \
 	LexicalReordering.h \
+	LexicalReorderingState.h \
 	LexicalReorderingTable.h \
 	Manager.h \
 	NGramCollection.h \
@@ -60,6 +61,7 @@ libmoses_la_HEADERS = \
 	PhraseDictionaryTreeAdaptor.h \
 	PrefixTreeMap.h \
 	ReorderingConstraint.h \
+	ReorderingStack.h \
 	ScoreComponentCollection.h \
 	ScoreIndexManager.h \
 	ScoreProducer.h \
@@ -145,6 +147,7 @@ libmoses_la_SOURCES = \
 	TrellisPath.cpp \
 	TrellisPathCollection.cpp \
 	LexicalReordering.cpp \
+	LexicalReorderingState.cpp \
 	LexicalReorderingTable.cpp \
 	Manager.cpp \
 	NGramCollection.cpp \
@@ -160,6 +163,7 @@ libmoses_la_SOURCES = \
 	PhraseDictionaryTreeAdaptor.cpp \
 	PrefixTreeMap.cpp \
 	ReorderingConstraint.cpp \
+	ReorderingStack.cpp \
 	ScoreComponentCollection.cpp \
 	ScoreIndexManager.cpp \
 	ScoreProducer.cpp \

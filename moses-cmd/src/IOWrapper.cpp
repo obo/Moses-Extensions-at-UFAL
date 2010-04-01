@@ -306,7 +306,7 @@ void OutputNBest(std::ostream& out, const Moses::TrellisPathList &nBestList, con
 	bool labeledOutput = staticData.IsLabeledNBestList();
 	bool reportAllFactors = staticData.GetReportAllFactorsNBest();
 	bool includeAlignment = staticData.NBestIncludesAlignment();
-	bool includeWordAlignment = staticData.PrintAlignmentInfoInNbest();
+	//bool includeWordAlignment = staticData.PrintAlignmentInfoInNbest();
 	
 	TrellisPathList::const_iterator iter;
 	for (iter = nBestList.begin() ; iter != nBestList.end() ; ++iter)
@@ -356,41 +356,6 @@ void OutputNBest(std::ostream& out, const Moses::TrellisPathList &nBestList, con
 			}
 		}
 
-		// print the scores in a hardwired order
-    // before each model type, the corresponding command-line-like name must be emitted
-    // MERT script relies on this
-
-		// basic distortion
-//		if (labeledOutput)
-//	    *m_nBestStream << "d: ";
-//		*m_nBestStream << path.GetScoreBreakdown().GetScoreForProducer(StaticData::Instance().GetDistortionScoreProducer()) << " ";
-
-//		reordering
-//		vector<LexicalReordering*> rms = StaticData::Instance().GetReorderModels();
-//		if(rms.size() > 0)
-//		{
-//				vector<LexicalReordering*>::iterator iter;
-//				for(iter = rms.begin(); iter != rms.end(); ++iter)
-//				{
-//					vector<float> scores = path.GetScoreBreakdown().GetScoresForProducer(*iter);
-//					for (size_t j = 0; j<scores.size(); ++j) 
-//					{
-//				  		*m_nBestStream << scores[j] << " ";
-//					}
-//				}
-//		}
-//			
-//		// lm
-//		const LMList& lml = StaticData::Instance().GetAllLM();
-//		if (lml.size() > 0) {
-//			if (labeledOutput)
-//				*m_nBestStream << "lm: ";
-//		  LMList::const_iterator lmi = lml.begin();
-//		  for (; lmi != lml.end(); ++lmi) {
-//			  *m_nBestStream << path.GetScoreBreakdown().GetScoreForProducer(*lmi) << " ";
-//		  }
-//		}
-//
 		// translation components
 		if (StaticData::Instance().GetInputType()==SentenceInput){  
 			// translation components	for text input
@@ -490,8 +455,37 @@ void OutputNBest(std::ostream& out, const Moses::TrellisPathList &nBestList, con
 	out <<std::flush;
 }
 
+void OutputLatticeMBRNBest(std::ostream& out, const vector<LatticeMBRSolution>& solutions,long translationId) {
+    for (vector<LatticeMBRSolution>::const_iterator si = solutions.begin(); si != solutions.end(); ++si) {
+        out << translationId;
+        out << " ||| ";
+        const vector<Word> mbrHypo = si->GetWords();
+        for (size_t i = 0 ; i < mbrHypo.size() ; i++)
+        {
+            const Factor *factor = mbrHypo[i].GetFactor(StaticData::Instance().GetOutputFactorOrder()[0]);
+            if (i>0) out << " ";
+            out << *factor;
+        }
+        out << " ||| ";
+        out << "map: " << si->GetMapScore();
+        out << " w: " << mbrHypo.size();
+        const vector<float>& ngramScores = si->GetNgramScores();
+        for (size_t i = 0; i < ngramScores.size(); ++i) {
+            out << " " << ngramScores[i];
+        }
+        out << " ||| ";
+        out << si->GetScore();
+        
+        out << endl;
+    }
+}
+
 void IOWrapper::OutputNBestList(const TrellisPathList &nBestList, long translationId) {
     OutputNBest(*m_nBestStream, nBestList,m_outputFactorOrder, translationId);
+}
+
+void IOWrapper::OutputLatticeMBRNBestList(const vector<LatticeMBRSolution>& solutions,long translationId) {
+    OutputLatticeMBRNBest(*m_nBestStream, solutions,translationId);
 }
 
 bool ReadInput(IOWrapper &ioWrapper, InputTypeEnum inputType, InputType*& source)

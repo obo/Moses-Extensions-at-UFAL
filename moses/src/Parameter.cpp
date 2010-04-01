@@ -43,6 +43,7 @@ Parameter::Parameter()
 	AddParam("config", "f", "location of the configuration file");
 	AddParam("continue-partial-translation", "cpt", "TODO - write info");
 	AddParam("drop-unknown", "du", "drop unknown words instead of copying them");
+  AddParam("disable-discarding", "dd", "disable hypothesis discarding");
 	AddParam("factor-delimiter", "fd", "specify a different factor delimiter than the default");
 	AddParam("generation-file", "location and properties of the generation table");
 	AddParam("global-lexical-file", "gl", "discriminatively trained global lexical translation model file");
@@ -60,6 +61,7 @@ Parameter::Parameter()
 	AddParam("max-phrase-length", "maximum phrase length (default 20)");
 	AddParam("n-best-list", "file and size of n-best-list to be generated; specify - as the file in order to write to STDOUT");
 	AddParam("n-best-factor", "factor to compute the maximum number of contenders (=factor*nbest-size). value 0 means infinity, i.e. no threshold. default is 0");
+  AddParam("print-all-derivations", "to print all derivations in search graph");
 	AddParam("output-factors", "list of factors in the output");
 	AddParam("phrase-drop-allowed", "da", "if present, allow dropping of source words"); //da = drop any (word); see -du for comparison
 	AddParam("report-all-factors", "report all factors in output, not just first");
@@ -98,6 +100,7 @@ Parameter::Parameter()
   AddParam("lmbr-pruning-factor", "average number of nodes/word wanted in pruned lattice");
   AddParam("lmbr-p", "unigram precision value for lattice mbr");
   AddParam("lmbr-r", "ngram precision decay value for lattice mbr");
+  AddParam("lmbr-map-weight", "weight given to map solution when doing lattice MBR (default 0)");
   AddParam("lattice-hypo-set", "to use lattice as hypo set during lattice MBR");
 	AddParam("use-persistent-cache", "cache translation options across sentences (default true)");
 	AddParam("persistent-cache-size", "maximum size of cache for translation options (default 10,000 input phrases)");
