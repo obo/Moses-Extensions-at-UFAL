@@ -90,6 +90,7 @@ my $skip_decoder = 0; # and should we skip the first decoder run (assuming we go
 my $___FILTER_PHRASE_TABLE = 1; # filter phrase table
 my $___PREDICTABLE_SEEDS = 0;
 my $___METRIC = "BLEU 4 shortest"; # name of metric that will be used for minimum error training, followed by metric parameters (see zmert documentation)
+my $___SEMPOSBLEU_WEIGHTS = "1 1"; # weights of SemPOS and BLEU
 my $___LAMBDAS_OUT = undef; # file where final lambdas should be written
 my $___EXTRACT_SEMPOS = "none"; # how shall we get the SemPOS factor (only for SemPOS metric)
       # options: 1) 'none' - moses generates SemPOS factor in required format 
@@ -135,6 +136,7 @@ GetOptions(
   "decoder-flags:s" => \$___DECODER_FLAGS,
   "lambdas=s" => \$___LAMBDA,
   "metric=s" => \$___METRIC,
+  "semposbleu-weights:s" => \$___SEMPOSBLEU_WEIGHTS,
   "extract-sempos=s" => \$___EXTRACT_SEMPOS,
   "norm:s" => \$___NORM,
   "help" => \$usage,
@@ -453,7 +455,9 @@ if( $___METRIC =~ /^SemPOS$/) {
 # 5) max ngram for BLEU 6) ref length strategy for BLEU
 # 7) index of factor to compute BLEU on
 elsif( $___METRIC =~ /^SemPOS_BLEU$/) {
-  $___METRIC .= " 1 1 1 2 4 closest 0";
+  $___SEMPOSBLEU_WEIGHTS =~ /^.*:.*$/ or die "--semposbleu-weights is not in format <sempos_weight>:<bleu_weight>";
+  $___SEMPOSBLEU_WEIGHTS =~ s/:/ /;
+  $___METRIC .= " $___SEMPOSBLEU_WEIGHTS 1 2 4 closest 0";
   $metric_num_factors = 3;
 }
 elsif( $___METRIC =~ /^BLEU$/) {
@@ -600,7 +604,7 @@ my \$factor_count = $metric_num_factors;
 FILE_EOF
 print DECODER_CMD <<'FILE_EOF';
 my @indices = split( /,/, $args);
-die "Specified only $#indices factors to extract but selected metric requires $factor_count factors" 
+die "Specified ".scalar @indices." factors to extract but selected metric requires $factor_count factors" 
   if( @indices != $factor_count);
 while( my $line = <NBEST_ORIG>) {
   my @array = split( /\|\|\|/, $line);
