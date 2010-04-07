@@ -2,7 +2,7 @@
 #define moses_PhraseDictionaryDynSuffixArray_h
 
 #include "PhraseDictionary.h"
-#include "DynSuffixArray.h" 
+#include "BilingualDynSuffixArray.h"
 
 namespace Moses {
 
@@ -19,7 +19,7 @@ public:
 	void SetWeightTransModel(const vector<float, std::allocator<float> >&);
 	const TargetPhraseCollection* GetTargetPhraseCollection(const Phrase& src) const;
 	void InitializeForInput(const InputType& i);
-	void AddEquivPhrase(const Phrase &source, const TargetPhrase &targetPhrase){}
+	void AddEquivPhrase(const Phrase &, const TargetPhrase &){}
 	void CleanUp();
 private:
 	BilingualDynSuffixArray *m_biSA;

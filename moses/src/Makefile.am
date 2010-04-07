@@ -62,6 +62,7 @@ libmoses_la_HEADERS = \
 	PartialTranslOptColl.h \
 	Phrase.h \
 	PhraseDictionary.h \
+	PhraseDictionaryDynSuffixArray.h \
 	PhraseDictionaryMemory.h \
 	PhraseDictionaryNode.h \
 	PhraseDictionaryTree.h \
@@ -167,6 +168,7 @@ libmoses_la_SOURCES = \
 	PartialTranslOptColl.cpp \
 	Phrase.cpp \
 	PhraseDictionary.cpp \
+	PhraseDictionaryDynSuffixArray.cpp \
 	PhraseDictionaryMemory.cpp \
 	PhraseDictionaryNode.cpp \
 	PhraseDictionaryTree.cpp \

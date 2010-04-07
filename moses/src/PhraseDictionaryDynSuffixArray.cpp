@@ -27,7 +27,7 @@ bool PhraseDictionaryDynSuffixArray::Load(string source, string target, string a
 	m_languageModels = &languageModels;
 	m_weightWP = weightWP;
 
-	m_biSA->Load( source, target, alignments, m_weight);
+	m_biSA->Load( source, target, alignments, weight);
 
 	return true;
 }
@@ -38,7 +38,7 @@ void PhraseDictionaryDynSuffixArray::InitializeForInput(const InputType& input)
 }
 
 void PhraseDictionaryDynSuffixArray::CleanUp() {
-	biSA->ClenaUp();
+	m_biSA->CleanUp();
 }
 void PhraseDictionaryDynSuffixArray::SetWeightTransModel(const std::vector<float, std::allocator<float> >&) {
 	return;
@@ -50,8 +50,8 @@ const TargetPhraseCollection *PhraseDictionaryDynSuffixArray::GetTargetPhraseCol
 	// extract target phrases and their scores from suffix array
 	m_biSA->GetTargetPhrasesByLexicalWeight( src, trg);
 
-	std::vector< std::pair< Scores, const TargetPhrase*> >::iterator itr;
-	for(itr = trg.begin(); itr != trg.rend(); ++itr) {
+	std::vector< std::pair< Scores, TargetPhrase*> >::iterator itr;
+	for(itr = trg.begin(); itr != trg.end(); ++itr) {
 		Scores scoreVector = itr->first;
 		TargetPhrase *targetPhrase = itr->second;
 		//std::transform(scoreVector.begin(),scoreVector.end(),scoreVector.begin(),NegateScore);
