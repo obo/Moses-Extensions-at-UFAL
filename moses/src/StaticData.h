@@ -523,9 +523,8 @@ public:
 
 	const TranslationOptionList* FindTransOptListInCache(const DecodeGraph &decodeGraph, const Phrase &sourcePhrase) const;
 
-	bool ContinuePartialTranslation() const { return m_continuePartialTranslation; }
-  
         bool PrintAllDerivations() const { return m_printAllDerivations;}
+	bool ContinuePartialTranslation() const { return m_continuePartialTranslation; }
 };
 
 }
