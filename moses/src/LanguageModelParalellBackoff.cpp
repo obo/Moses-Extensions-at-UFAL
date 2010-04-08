@@ -274,7 +274,7 @@ void LanguageModelParalellBackoff::CreateFactors()
 				
 			
 		float p = m_srilmModel->wordProb( widMatrix, contextFactor.size() - 1, contextFactor.size() );		
-    return FloorScore(TransformSRIScore(p));
+    return FloorScore(TransformLMScore(p));
 
 		/*if (contextFactor.size() == 0)
 		{
@@ -297,7 +297,7 @@ void LanguageModelParalellBackoff::CreateFactors()
 		}
 	
 		float p = m_srilmModel->wordProb( (*widMatrix), m_nGramOrder - 1, m_nGramOrder );
-    return FloorScore(TransformSRIScore(p)); */
+    return FloorScore(TransformLMScore(p)); */
 	}
 	
 }
