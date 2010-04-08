@@ -59,7 +59,6 @@ protected:
 	
 public:
 		TargetPhrase(FactorDirection direction=Output);
-		TargetPhrase(FactorDirection direction, std::string out_string);
 		~TargetPhrase(){};
 		
 	/** used by the unknown word handler.
