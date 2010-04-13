@@ -60,6 +60,7 @@ class DistortionScoreProducer;
 class WordPenaltyProducer;
 class DecodeStep;
 class UnknownWordPenaltyProducer;
+class SourceContextFeature;
 
 typedef std::pair<std::string, float> UnknownLHSEntry;	
 typedef std::vector<UnknownLHSEntry>  UnknownLHSList;	
@@ -81,6 +82,8 @@ protected:
 	std::vector<float>			m_allWeights;
 	std::vector<LexicalReordering*>                   m_reorderModels;
 	std::vector<GlobalLexicalModel*>                   m_globalLexicalModels;
+	std::vector<SourceContextFeature*>		m_sourceContextFeatures;	
+
 		// Initial	= 0 = can be used when creating poss trans
 		// Other		= 1 = used to calculate LM score once all steps have been processed
 	float
@@ -218,7 +221,9 @@ protected:
 	//! load decoding steps
 	bool LoadLexicalReorderingModel();
 	bool LoadGlobalLexicalModel();
-    void ReduceTransOptCache() const;   
+	bool LoadSourceContextFeatures();	
+
+	void ReduceTransOptCache() const;   
 	
 public:
 

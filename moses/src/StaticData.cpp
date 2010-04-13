@@ -36,6 +36,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "LanguageModelFactory.h"
 #include "LexicalReordering.h"
 #include "GlobalLexicalModel.h"
+#include "SourceContextFeature.h"
 #include "SentenceStats.h"
 #include "PhraseDictionaryTreeAdaptor.h"
 #include "UserMessage.h"
@@ -418,6 +419,7 @@ bool StaticData::LoadData(Parameter *parameter)
 	if (!LoadGenerationTables()) return false;
 	if (!LoadPhraseTables()) return false;
 	if (!LoadGlobalLexicalModel()) return false;
+	if (!LoadSourceContextFeatures()) return false;
 
 	m_scoreIndexManager.InitFeatureNames();
 	if (m_parameter->GetParam("weight-file").size() > 0) {
@@ -581,6 +583,47 @@ bool StaticData::LoadGlobalLexicalModel()
 	return true;
 }
 
+bool StaticData::LoadSourceContextFeatures()
+{
+	const vector<float> &weight = Scan<float>(m_parameter->GetParam("weight-scf"));
+	const vector<string> &file = m_parameter->GetParam("source-context-file");
+
+	// check we have the same number of weights and files  
+	if (weight.size() != file.size())
+	{
+		stringstream strme;
+		strme << "number of weights (" << weight.size() << ") and models (" << file.size()
+			<< ") for source-context features do not match";
+		UserMessage::Add(strme.str());
+		return false;
+	}
+
+	// 'file' contains the factor specification and the type of the feature  
+	for (size_t i = 0; i < weight.size(); i++ )
+	{
+		vector<string> spec = Tokenize<string>(file[i], " ");
+		if ( spec.size() != 3 )
+		{
+			UserMessage::Add("wrong source-context features specification: " + file[i]);
+			return false;
+		}
+		vector< string > factors = Tokenize(spec[1],"-");
+		if ( factors.size() != 2 )
+		{
+			UserMessage::Add("wrong factor definition for source-context features: " + spec[0]);
+			return false;
+		}
+		vector<FactorType> inputFactors = Tokenize<FactorType>(factors[0],",");
+		vector<FactorType> outputFactors = Tokenize<FactorType>(factors[1],",");
+		// create feature of type spec[0] with path to data in spec[2]
+		m_sourceContextFeatures.push_back( 
+			new SourceContextFeature( spec[0], spec[2], weight[i], inputFactors, outputFactors ) );
+	}
+	IFVERBOSE(1)
+		PrintUserTime("Finished loading SourceContextFeatures");
+	return true;
+}
+
 bool StaticData::LoadLanguageModels()
 {
 	if (m_parameter->GetParam("lmodel-file").size() > 0)
@@ -595,7 +638,7 @@ bool StaticData::LoadLanguageModels()
 		
 		// dictionary upper-bounds fo all IRST LMs
 		vector<int> LMdub = Scan<int>(m_parameter->GetParam("lmodel-dub"));
-    if (m_parameter->GetParam("lmodel-dub").size() == 0){
+		if (m_parameter->GetParam("lmodel-dub").size() == 0){
 			for(size_t i=0; i<m_parameter->GetParam("lmodel-file").size(); i++)
 				LMdub.push_back(0);
 		}
