@@ -20,7 +20,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_InputType_h
+#define moses_InputType_h
 
 #include <string>
 #include "TypeDef.h"
@@ -35,6 +36,8 @@ class WordsRange;
 class Factor;
 class PhraseDictionary;
 class TranslationOptionCollection;
+	
+typedef std::vector<Word> LabelList;
 
 //! base class for sentences and confusion networks
 class InputType 
@@ -120,6 +123,8 @@ public:
 		return m_reorderingConstraint;
 	};
 
+	virtual const LabelList &GetLabelList(size_t startPos, size_t endPos) const = 0;
+
 	TO_STRING();
 	
 };
@@ -128,3 +133,4 @@ std::ostream& operator<<(std::ostream&,InputType const&);
 
 }
 
+#endif

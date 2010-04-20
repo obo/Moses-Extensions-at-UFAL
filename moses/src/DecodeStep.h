@@ -19,7 +19,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_DecodeStep_h
+#define moses_DecodeStep_h
 
 #include <cassert>
 #include "TypeDef.h"
@@ -52,7 +53,7 @@ protected:
 
 public:
 	DecodeStep(); //! not implemented
-	DecodeStep(Dictionary *ptr, const DecodeStep* prevDecodeStep);
+	DecodeStep(const Dictionary *ptr, const DecodeStep* prevDecodeStep);
 	virtual ~DecodeStep();
 
 	//! mask of factors that are present after this decode step
@@ -109,3 +110,4 @@ public:
 };
 
 }
+#endif

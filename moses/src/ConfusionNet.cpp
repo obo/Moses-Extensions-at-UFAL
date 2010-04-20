@@ -80,7 +80,7 @@ bool ConfusionNet::ReadF(std::istream& in,
 		case 0: return ReadFormat0(in,factorOrder);
 		case 1: return ReadFormat1(in,factorOrder);
 		default: 
-			stringstream strme;
+            std::stringstream strme;
 			strme << "ERROR: unknown format '"<<format
 							 <<"' in ConfusionNet::Read";
 			UserMessage::Add(strme.str());
@@ -202,24 +202,29 @@ void ConfusionNet::Print(std::ostream& out) const {
 	out<<"\n\n";
 }
 
+#ifdef _WIN32
 #pragma warning(disable:4716)
+#endif
 Phrase ConfusionNet::GetSubString(const WordsRange&) const {
 	TRACE_ERR("ERROR: call to ConfusionNet::GetSubString\n");
 	abort();
 	//return Phrase(Input);
 }
 
-std::string ConfusionNet::GetStringRep(const vector<FactorType> factorsToPrint) const{ //not well defined yet
+std::string ConfusionNet::GetStringRep(const std::vector<FactorType> factorsToPrint) const{ //not well defined yet
 	TRACE_ERR("ERROR: call to ConfusionNet::GeStringRep\n");
 	return "";
 }
+#ifdef _WIN32
 #pragma warning(disable:4716)
+#endif
 const Word& ConfusionNet::GetWord(size_t) const {
 	TRACE_ERR("ERROR: call to ConfusionNet::GetFactorArray\n");
 	abort();
 }
+#ifdef _WIN32
 #pragma warning(default:4716)
-
+#endif
 std::ostream& operator<<(std::ostream& out,const ConfusionNet& cn) 
 {
 	cn.Print(out);return out;

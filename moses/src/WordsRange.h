@@ -19,7 +19,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_WordsRange_h
+#define moses_WordsRange_h
 
 #include <iostream>
 #include "TypeDef.h"
@@ -64,7 +65,12 @@ public:
 		return (m_startPos<x.m_startPos 
 						|| (m_startPos==x.m_startPos && m_endPos<x.m_endPos));
 	}
-	
+
+	// equality operator
+	inline bool operator==(const WordsRange& x) const 
+	{
+	  return (m_startPos==x.m_startPos && m_endPos==x.m_endPos);
+	}	
 	// Whether two word ranges overlap or not
 	inline bool Overlap(const WordsRange& x) const
 	{
@@ -91,3 +97,4 @@ public:
 
 
 }
+#endif

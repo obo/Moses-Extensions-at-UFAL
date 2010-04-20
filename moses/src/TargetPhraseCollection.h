@@ -19,7 +19,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_TargetPhraseCollection_h
+#define moses_TargetPhraseCollection_h
 
 #include <vector>
 #include "TargetPhrase.h"
@@ -68,7 +69,10 @@ public:
 		m_collection.push_back(targetPhrase);
 	}
 	
+	void Prune(bool adhereTableLimit, size_t tableLimit);
+
 };
 
 }
 
+#endif

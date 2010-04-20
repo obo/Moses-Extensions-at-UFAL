@@ -1,4 +1,4 @@
-// $Id: ReorderingConstraint.h 1466 2007-09-27 23:22:58Z redpony $
+// $Id: ReorderingConstraint.h 3045 2010-04-05 13:07:29Z hieuhoang1972 $
 // vim:tabstop=2
 
 /***********************************************************************
@@ -20,7 +20,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_ReorderingConstraint_h
+#define moses_ReorderingConstraint_h
 
 //#include <malloc.h>
 #include <limits>
@@ -93,3 +94,4 @@ public:
 };
 
 }
+#endif

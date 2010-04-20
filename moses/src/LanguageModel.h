@@ -19,7 +19,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_LanguageModel_h
+#define moses_LanguageModel_h
 
 #include <string>
 #include <vector>
@@ -45,6 +46,8 @@ protected:
 	size_t			m_nGramOrder; //! max n-gram length contained in this LM
 	Word m_sentenceStartArray, m_sentenceEndArray; //! Contains factors which represents the beging and end words for this LM. 
 																								//! Usually <s> and </s>
+
+	void ShiftOrPush(std::vector<const Word*> &contextFactor, const Word &word) const;
 
 	/** constructor to be called by inherited class
 	 * \param registerScore whether this LM will be directly used to score sentence. 
@@ -82,6 +85,11 @@ public:
 	void CalcScore(const Phrase &phrase
 							, float &fullScore
 							, float &ngramScore) const;
+	
+	void CalcScoreChart(const Phrase &phrase
+									, float &beginningBitsOnly
+									, float &ngramScore) const;
+	
 	/* get score of n-gram. n-gram should not be bigger than m_nGramOrder
 	 * Specific implementation can return State and len data to be used in hypothesis pruning
 	 * \param contextFactor n-gram to be scored
@@ -131,7 +139,7 @@ public:
 	virtual void InitializeBeforeSentenceProcessing(){};
 	virtual void CleanUpAfterSentenceProcessing() {};
 
-	virtual const FFState* EmptyHypothesisState() const;
+	virtual const FFState* EmptyHypothesisState(const InputType &input) const;
 
   virtual FFState* Evaluate(
     const Hypothesis& cur_hypo,
@@ -142,3 +150,4 @@ public:
 
 }
 
+#endif

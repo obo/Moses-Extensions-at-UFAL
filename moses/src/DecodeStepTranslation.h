@@ -19,7 +19,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_DecodeStepTranslation_h
+#define moses_DecodeStepTranslation_h
 
 #include "DecodeStep.h"
 #include "PhraseDictionary.h"
@@ -35,7 +36,7 @@ class DecodeStepTranslation : public DecodeStep
 {
 public:
 	DecodeStepTranslation(); //! not implemented
-	DecodeStepTranslation(PhraseDictionary* dict, const DecodeStep* prev);
+	DecodeStepTranslation(const PhraseDictionary* dict, const DecodeStep* prev);
 
   //! returns phrase table (dictionary) for translation step 
   const PhraseDictionary &GetPhraseDictionary() const;
@@ -58,8 +59,8 @@ private:
 		This function runs IsCompatible() to ensure the two can be merged
 	*/
 	TranslationOption *MergeTranslation(const TranslationOption& oldTO, const TargetPhrase &targetPhrase) const;
-    PhraseDictionary* m_phraseDictionary;   
 };
 
 
 }
+#endif

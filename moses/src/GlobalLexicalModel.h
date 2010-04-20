@@ -1,4 +1,5 @@
-#pragma once
+#ifndef moses_GlobalLexicalModel_h
+#define moses_GlobalLexicalModel_h
 
 #include <string>
 #include <vector>
@@ -20,8 +21,6 @@ class Phrase;
 class Hypothesis;
 class InputType;
 
-using namespace std;
-
 /** Discriminatively trained global lexicon model
  * This is a implementation of Mauser et al., 2009's model that predicts
  * each output word from _all_ the input words. The intuition behind this
@@ -29,40 +28,40 @@ using namespace std;
  */
 
 class GlobalLexicalModel : public StatelessFeatureFunction {
-	typedef map< const Word*, map< const Word*, float, WordComparer >, WordComparer > DoubleHash;
-	typedef map< const Word*, float, WordComparer > SingleHash;
+	typedef std::map< const Word*, std::map< const Word*, float, WordComparer >, WordComparer > DoubleHash;
+	typedef std::map< const Word*, float, WordComparer > SingleHash;
 private:
 	DoubleHash m_hash;
-	map< const TargetPhrase*, float > *m_cache;
+	std::map< const TargetPhrase*, float > *m_cache;
 	const Sentence *m_input;
 	Word *m_bias;
 	
 	FactorMask m_inputFactors;
 	FactorMask m_outputFactors;
 
-	void LoadData(const string &filePath,
-	              const vector< FactorType >& inFactors,
-	              const vector< FactorType >& outFactors);
+	void LoadData(const std::string &filePath,
+	              const std::vector< FactorType >& inFactors,
+	              const std::vector< FactorType >& outFactors);
 	
 	float ScorePhrase( const TargetPhrase& targetPhrase ) const;
 	float GetFromCacheOrScorePhrase( const TargetPhrase& targetPhrase ) const;
 
 public:
-	GlobalLexicalModel(const string &filePath,
+	GlobalLexicalModel(const std::string &filePath,
 	                   const float weight,
-	                   const vector< FactorType >& inFactors,
-	                   const vector< FactorType >& outFactors);
+	                   const std::vector< FactorType >& inFactors,
+	                   const std::vector< FactorType >& outFactors);
 	virtual ~GlobalLexicalModel();
 
 	virtual size_t GetNumScoreComponents() const {
 		return 1;
 	};
 
-	virtual string GetScoreProducerDescription() const {
+	virtual std::string GetScoreProducerDescription() const {
 		return "GlobalLexicalModel";
 	};
 
-	virtual string GetScoreProducerWeightShortName() const {
+	virtual std::string GetScoreProducerWeightShortName() const {
 		return "lex";
 	};
 
@@ -72,3 +71,4 @@ public:
 };
 
 }
+#endif

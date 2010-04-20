@@ -19,7 +19,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_Util_h
+#define moses_Util_h
 
 #include <iostream>
 #include <cassert>
@@ -47,9 +48,9 @@ namespace Moses
  * output on command line
  * */
 #ifdef TRACE_ENABLE
-#define TRACE_ERR(str) std::cerr << str
+#define TRACE_ERR(str) do { std::cerr << str; } while (false)
 #else
-#define TRACE_ERR(str) {}
+#define TRACE_ERR(str) do {} while (false)
 #endif
 
 /** verbose macros
@@ -57,6 +58,10 @@ namespace Moses
 #define VERBOSE(level,str) { if (StaticData::Instance().GetVerboseLevel() >= level) { TRACE_ERR(str); } }
 #define IFVERBOSE(level) if (StaticData::Instance().GetVerboseLevel() >= level)
 
+//! delete white spaces at beginning and end of string
+const std::string Trim(const std::string& str, const std::string dropChars = " \t\n\r");
+const std::string ToLower(const std::string& str);
+	
 //! get string representation of any object/variable, as long as it can pipe to a stream
 template<typename T>
 inline std::string SPrint(const T &input)
@@ -74,20 +79,6 @@ inline T Scan(const std::string &input)
 	T ret;
 	stream >> ret;
 	return ret;
-}
-
-//! Specialisation for performance
-template<>
-inline int Scan<int>(const std::string &input)
-{
-	return atoi(input.c_str());
-}
-
-//! Specialisation for performance
-template<>
-inline float Scan<float>(const std::string &input)
-{
-	return (float) atof(input.c_str());
 }
 
 //! just return input
@@ -113,6 +104,17 @@ inline std::vector<T> Scan(const std::vector< std::string > &input)
 	return output;
 }
 
+//! speeded up version of above
+template<typename T>
+inline void Scan(std::vector<T> &output, const std::vector< std::string > &input)
+{
+	output.resize(input.size());
+	for (size_t i = 0 ; i < input.size() ; i++)
+	{
+		output[i] = Scan<T>( input[i] );
+	}
+}
+	
 /** replace all occurrences of todelStr in str with the string toaddStr */
 inline std::string Replace(const std::string& str,
 													 const std::string& todelStr,
@@ -149,6 +151,27 @@ inline std::vector<std::string> Tokenize(const std::string& str,
 	return tokens;
 }
 
+// speeded up version of above
+inline void Tokenize(std::vector<std::string> &output
+										 , const std::string& str
+										 , const std::string& delimiters = " \t")
+{
+	// Skip delimiters at beginning.
+	std::string::size_type lastPos = str.find_first_not_of(delimiters, 0);
+	// Find first "non-delimiter".
+	std::string::size_type pos     = str.find_first_of(delimiters, lastPos);
+	
+	while (std::string::npos != pos || std::string::npos != lastPos)
+	{
+		// Found a token, add it to the vector.
+		output.push_back(str.substr(lastPos, pos - lastPos));
+		// Skip delimiters.  Note the "not_of"
+		lastPos = str.find_first_not_of(delimiters, pos);
+		// Find next "non-delimiter"
+		pos = str.find_first_of(delimiters, lastPos);
+	}
+}
+	
 //! tokenise input string to vector of type T
 template<typename T>
 inline std::vector<T> Tokenize( const std::string &input
@@ -158,6 +181,17 @@ inline std::vector<T> Tokenize( const std::string &input
 	return Scan<T>( stringVector );
 }
 
+// speeded up version of above
+template<typename T>
+inline void Tokenize( std::vector<T> &output
+										 , const std::string &input
+										 , const std::string& delimiters = " \t")
+{
+	std::vector<std::string> stringVector;
+	Tokenize(stringVector, input, delimiters);
+	return Scan<T>(output, stringVector );
+}
+	
 inline std::vector<std::string> TokenizeMultiCharSeparator(
 																				const std::string& str,
 																				const std::string& separator)
@@ -182,6 +216,28 @@ inline std::vector<std::string> TokenizeMultiCharSeparator(
 	return tokens;
 }
 
+// speeded up version of above
+inline void TokenizeMultiCharSeparator(std::vector<std::string> &output
+																			 ,const std::string& str
+																			 ,const std::string& separator)
+{
+	size_t pos = 0;
+	// Find first "non-delimiter".
+	std::string::size_type nextPos     = str.find(separator, pos);
+	
+	while (nextPos != std::string::npos)
+	{
+		// Found a token, add it to the vector.
+		output.push_back(Trim(str.substr(pos, nextPos - pos)));
+		// Skip delimiters.  Note the "not_of"
+		pos = nextPos + separator.size();
+		// Find next "non-delimiter"
+		nextPos	= str.find(separator, pos);
+	}
+	output.push_back(Trim(str.substr(pos, nextPos - pos)));
+}
+
+	
 /**
  * Convert vector of type T to string
  */
@@ -209,12 +265,12 @@ inline float UntransformScore(float score)
 }
 
 //! irst number are in log 10, transform to natural log
-inline float TransformIRSTScore(float irstScore)
+inline float TransformLMScore(float irstScore)
 { 
 	return irstScore * 2.30258509299405f;
 }
 
-inline float UntransformIRSTScore(float logNScore)
+inline float UntransformLMScore(float logNScore)
 { // opposite of above
 	return logNScore / 2.30258509299405f;
 }
@@ -223,17 +279,6 @@ inline float UntransformIRSTScore(float logNScore)
 inline float FloorScore(float logScore)
 {
 	return (std::max)(logScore , LOWEST_SCORE);
-}
-
-//! Should SRI & IRST transform functions be merged ???
-inline float TransformSRIScore(float sriScore)
-{
-	return sriScore * 2.30258509299405f;
-}
-
-inline float UntransformSRIScore(float logNScore)
-{ // opposite of above
-	return logNScore / 2.30258509299405f;
 }
 
 /** convert prob vector to log prob and calc inner product with weight vector.
@@ -296,9 +341,6 @@ inline void ShrinkToFit(T& v)
 }
 
 bool FileExists(const std::string& filePath);
-//! delete white spaces at beginning and end of string
-const std::string Trim(const std::string& str, const std::string dropChars = " \t\n\r");
-const std::string ToLower(const std::string& str);
 
 // A couple of utilities to measure decoding time
 void ResetUserTime();
@@ -310,3 +352,4 @@ std::map<std::string, std::string> ProcessAndStripSGML(std::string &line);
 
 }
 
+#endif

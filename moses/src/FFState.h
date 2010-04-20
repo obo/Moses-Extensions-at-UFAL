@@ -1,3 +1,10 @@
+#ifndef moses_FFState_h
+#define moses_FFState_h
+
+#include <cassert>
+#include <vector>
+
+
 namespace Moses {
 
 class FFState {
@@ -7,3 +14,4 @@ class FFState {
 };
 
 }
+#endif

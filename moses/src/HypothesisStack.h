@@ -1,5 +1,5 @@
-
-#pragma once
+#ifndef moses_HypothesisStack_h
+#define moses_HypothesisStack_h
 
 #include <vector>
 #include <set>
@@ -9,7 +9,7 @@
 namespace Moses
 {
   
-  class Manager;
+class Manager;
 
 class HypothesisStack
 {
@@ -27,9 +27,9 @@ public:
 	const_iterator begin() const { return m_hypos.begin(); }
 	const_iterator end() const { return m_hypos.end(); }
 	size_t size() const { return m_hypos.size(); }
-	virtual inline float GetWorstScore() const { return -numeric_limits<float>::infinity(); };
-	virtual float GetWorstScoreForBitmap( WordsBitmapID ) { return -numeric_limits<float>::infinity(); };
-	virtual float GetWorstScoreForBitmap( WordsBitmap ) { return -numeric_limits<float>::infinity(); };
+	virtual inline float GetWorstScore() const { return -std::numeric_limits<float>::infinity(); };
+	virtual float GetWorstScoreForBitmap( WordsBitmapID ) { return -std::numeric_limits<float>::infinity(); };
+	virtual float GetWorstScoreForBitmap( WordsBitmap ) { return -std::numeric_limits<float>::infinity(); };
 
 	virtual ~HypothesisStack();
 	virtual bool AddPrune(Hypothesis *hypothesis) = 0;
@@ -45,3 +45,4 @@ public:
 
 }
 
+#endif

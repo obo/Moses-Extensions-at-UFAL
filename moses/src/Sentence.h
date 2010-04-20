@@ -19,7 +19,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_Sentence_h
+#define moses_Sentence_h
 
 #include <vector>
 #include <string>
@@ -50,14 +51,16 @@ class Sentence : public Phrase, public InputType
 	 * Utility method that takes in a string representing an XML tag and the name of the attribute,
 	 * and returns the value of that tag if present, empty string otherwise
 	 */
-	static std::string ParseXmlTagAttribute(const std::string& tag,const std::string& attributeName);
 	std::vector <TranslationOption*> m_xmlOptionsList;
 	std::vector <bool> m_xmlCoverageMap;
 
+	LabelList m_defaultLabelList;
+	
+	void InitStartEndWord();
+
+
  public:
-	Sentence(FactorDirection direction)	: Phrase(direction), InputType()
-	{
-	}
+	Sentence(FactorDirection direction);
 
 	InputTypeEnum GetType() const
 	{	return SentenceInput;}
@@ -95,8 +98,12 @@ class Sentence : public Phrase, public InputType
 												, const std::string &phraseString
 												, const std::string &factorDelimiter);
 	
+    const LabelList &GetLabelList(size_t /*startPos*/, size_t /*endPos*/) const
+	{	return m_defaultLabelList;	}
+
 };
 
 
 }
 
+#endif

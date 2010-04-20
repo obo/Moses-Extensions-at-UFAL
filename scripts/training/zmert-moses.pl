@@ -90,6 +90,7 @@ my $skip_decoder = 0; # and should we skip the first decoder run (assuming we go
 my $___FILTER_PHRASE_TABLE = 1; # filter phrase table
 my $___PREDICTABLE_SEEDS = 0;
 my $___METRIC = "BLEU 4 shortest"; # name of metric that will be used for minimum error training, followed by metric parameters (see zmert documentation)
+my $___SEMPOSBLEU_WEIGHTS = "1 1"; # weights of SemPOS and BLEU
 my $___LAMBDAS_OUT = undef; # file where final lambdas should be written
 my $___EXTRACT_SEMPOS = "none"; # how shall we get the SemPOS factor (only for SemPOS metric)
       # options: 1) 'none' - moses generates SemPOS factor in required format 
@@ -135,12 +136,13 @@ GetOptions(
   "decoder-flags:s" => \$___DECODER_FLAGS,
   "lambdas=s" => \$___LAMBDA,
   "metric=s" => \$___METRIC,
+  "semposbleu-weights:s" => \$___SEMPOSBLEU_WEIGHTS,
   "extract-sempos=s" => \$___EXTRACT_SEMPOS,
   "norm:s" => \$___NORM,
   "help" => \$usage,
   "verbose" => \$verbose,
-  "mert-verbose" => \$___MERT_VERBOSE,
-  "decoder-verbose" => \$___DECODER_VERBOSE,
+  "mert-verbose:i" => \$___MERT_VERBOSE,
+  "decoder-verbose:i" => \$___DECODER_VERBOSE,
   "mertdir:s" => \$mertdir, # allow to override the default location of zmert.jar
   "lambdas-out:s" => \$___LAMBDAS_OUT,
   "rootdir=s" => \$SCRIPTS_ROOTDIR,
@@ -149,7 +151,7 @@ GetOptions(
   "mosesparallelcmd=s" => \$moses_parallel_cmd, # allow to override the default location
   "old-sge" => \$old_sge, #passed to moses-parallel
   "filter-phrase-table!" => \$___FILTER_PHRASE_TABLE, # allow (disallow)filtering of phrase tables
-  "predictable-seeds" => \$___PREDICTABLE_SEEDS, # allow (disallow) switch on/off reseeding of random restarts
+  "predictable-seeds:s" => \$___PREDICTABLE_SEEDS, # allow (disallow) switch on/off reseeding of random restarts
   "async=i" => \$___ASYNC, #whether script to be used with async decoder
   "activate-features=s" => \$___ACTIVATE_FEATURES #comma-separated (or blank-separated) list of features to work on (others are fixed to the starting values)
 ) or exit(1);
@@ -438,10 +440,14 @@ if (defined $___JOBS) {
 
 my $zmert_decoder_cmd = "$SCRIPTS_ROOTDIR/training/zmert-decoder.pl";
 
+# number of factors that a given metric requires
+my $metric_num_factors = 1;	
+
 # SemPOS metric requires 2 parameters specifying position of t_lemma and sempos factor
 # e.g. for t_lemma|sempos|factor3|factor4|... the values are 0 and 1 (default setting)
 if( $___METRIC =~ /^SemPOS$/) {
   $___METRIC .= " 0 1";
+  $metric_num_factors = 2;
 }
 # SemPOS_BLEU metric requires 7 parameters
 # 1) weight of SemPOS 2) weight of BLEU 
@@ -449,7 +455,10 @@ if( $___METRIC =~ /^SemPOS$/) {
 # 5) max ngram for BLEU 6) ref length strategy for BLEU
 # 7) index of factor to compute BLEU on
 elsif( $___METRIC =~ /^SemPOS_BLEU$/) {
-  $___METRIC .= " 1 1 1 2 4 closest 0";
+  $___SEMPOSBLEU_WEIGHTS =~ /^.*:.*$/ or die "--semposbleu-weights is not in format <sempos_weight>:<bleu_weight>";
+  $___SEMPOSBLEU_WEIGHTS =~ s/:/ /;
+  $___METRIC .= " $___SEMPOSBLEU_WEIGHTS 1 2 4 closest 0";
+  $metric_num_factors = 3;
 }
 elsif( $___METRIC =~ /^BLEU$/) {
   $___METRIC .= " 4 closest";
@@ -591,21 +600,31 @@ FILE_EOF
 if( "$___EXTRACT_SEMPOS" =~ /factors/) {
   print DECODER_CMD <<"FILE_EOF";
 my (undef, \$args) = split( /:/, "$___EXTRACT_SEMPOS");
+my \$factor_count = $metric_num_factors;
 FILE_EOF
 print DECODER_CMD <<'FILE_EOF';
-my ($form_index, $sempos_index) = split( /,/, $args, 2);
+my @indices = split( /,/, $args);
+die "Specified ".scalar @indices." factors to extract but selected metric requires $factor_count factors" 
+  if( @indices != $factor_count);
 while( my $line = <NBEST_ORIG>) {
   my @array = split( /\|\|\|/, $line);
   # remove feature names from the feature scores string
   $array[2] = extractScores( $array[2]);
-  # extract factor on position $factor_index
   my @tokens = split( /\s/, $array[1]); # split sentence into words
   $array[1] = "";
   foreach my $token (@tokens) {
-    my @factors = split( /\|/, \$token);
-    $array[1] .= join( "|", $factors[$form_index], $factors[$sempos_index]);
+    next if $token eq "";
+    my @factors = split( /\|/, $token);
+    my $put_separator = 0;
+    foreach my $index (@indices) {
+      die "Cannot extract factor with index $index from '$token'" if ($index > $#factors);
+      $array[1] .= '|' if ($put_separator);	# separator between factors
+      $array[1] .= $factors[$index];
+      $put_separator = 1;
+    }
+    $array[1] .= " ";	# space between words
   }
-  print NBEST join( '|||', @array)."\n";
+  print NBEST join( '|||', @array);
 }
  
 FILE_EOF
@@ -655,11 +674,7 @@ die "Error: Sent $line_count sentences to analyze but got only $line_count_check
 FILE_EOF
 
 } elsif ($___EXTRACT_SEMPOS eq "none") {
-print DECODER_CMD <<'FILE_EOF';
-  while( my $line = <NBEST_ORIG>) {
-    print NBEST $line;
-  }
-FILE_EOF
+  # no preprocessing needed
 } else {
   die "Unknown type of factor extraction: $___EXTRACT_SEMPOS";
 }
@@ -877,7 +892,7 @@ sub mergeConfigs {
   while( $cont) {
     $b_line = <BASE>;
     $w_line = <WEIGHTS>;
-    $cont = defined $b_line and defined $w_line;
+    $cont = (defined $b_line and defined $w_line);
     if( $b_line =~ /^\[weight-/) {
       if( $w_line !~ /^\[weight-/) { die "mergeConfigs: $config_base and $config_weights do not have the same format"; }
       print NEW $w_line;

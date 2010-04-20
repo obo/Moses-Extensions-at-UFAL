@@ -1,8 +1,10 @@
 // $Id$
 
-#ifndef PHRASEDICTIONARYTREEADAPTOR_H_
-#define PHRASEDICTIONARYTREEADAPTOR_H_
+#ifndef moses_PhraseDictionaryTreeAdaptor_h
+#define moses_PhraseDictionaryTreeAdaptor_h
+
 #include <vector>
+#include <cassert>
 #include "TypeDef.h"
 #include "PhraseDictionaryMemory.h"
 #include "TargetPhraseCollection.h"
@@ -70,6 +72,12 @@ class PhraseDictionaryTreeAdaptor : public PhraseDictionary {
 	size_t GetNumInputScores() const;
     virtual void InitializeForInput(InputType const& source);
 	
+    const ChartRuleCollection *GetChartRuleCollection(InputType const& /*src*/, WordsRange const& /*range*/,
+            bool /*adhereTableLimit*/,const CellCollection &/*cellColl*/) const
+	{ 
+		assert(false);
+		return NULL;
+	}
 };
 
 }

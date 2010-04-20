@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <set>
 
+using namespace std;
+
 size_t bleu_order = 4;
 float UNKNGRAMLOGPROB = -20;
 void GetOutputWords(const TrellisPath &path, vector <Word> &translation){
@@ -72,11 +74,65 @@ NgramScores::NodeScoreIterator NgramScores::nodeEnd(const Hypothesis* node)  {
     return m_scores[node].end();
 }
 
+LatticeMBRSolution::LatticeMBRSolution(const TrellisPath& path, bool isMap) :
+        m_score(0.0f){
+    const std::vector<const Hypothesis *> &edges = path.GetEdges();
+    
+    for (int currEdge = (int)edges.size() - 1 ; currEdge >= 0 ; currEdge--)
+    {
+        const Hypothesis &edge = *edges[currEdge];
+        const Phrase &phrase = edge.GetCurrTargetPhrase();
+        size_t size = phrase.GetSize();
+        for (size_t pos = 0 ; pos < size ; pos++)
+        {
+            m_words.push_back(phrase.GetWord(pos));
+        }
+    }
+    if (isMap) {
+        m_mapScore = path.GetTotalScore();
+    } else {
+        m_mapScore = 0;
+    }
+}
+
+
+void LatticeMBRSolution::CalcScore(map<Phrase, float>& finalNgramScores, const vector<float>& thetas, float mapWeight) {
+    m_ngramScores.assign(thetas.size()-1, -10000);
+    
+    map < Phrase, int > counts;
+    extract_ngrams(m_words,counts);
+    
+    //Now score this translation
+    m_score = thetas[0] * m_words.size();
+
+    //Calculate the ngramScores, working in log space at first
+    for (map < Phrase, int >::iterator ngrams = counts.begin(); ngrams != counts.end(); ++ngrams) {
+        float ngramPosterior = UNKNGRAMLOGPROB; 
+        map<Phrase,float>::const_iterator ngramPosteriorIt = finalNgramScores.find(ngrams->first);
+        if (ngramPosteriorIt != finalNgramScores.end()) {
+            ngramPosterior = ngramPosteriorIt->second;
+        }
+        size_t ngramSize = ngrams->first.GetSize();
+        m_ngramScores[ngramSize-1] = log_sum(log((float)ngrams->second) + ngramPosterior,m_ngramScores[ngramSize-1]);
+    }
+    
+    //convert from log to probability and create weighted sum
+    for (size_t i = 0; i < m_ngramScores.size(); ++i) {
+        m_ngramScores[i] = exp(m_ngramScores[i]);
+        m_score += thetas[i+1] * m_ngramScores[i];
+    }
+
+    
+    //The map score
+    m_score += m_mapScore*mapWeight;
+}
+
 
 void pruneLatticeFB(Lattice & connectedHyp, map < const Hypothesis*, set <const Hypothesis* > > & outgoingHyps, map<const Hypothesis*, vector<Edge> >& incomingEdges, 
-                    const vector< float> & estimatedScores, size_t edgeDensity) {
+                    const vector< float> & estimatedScores, const Hypothesis* bestHypo, size_t edgeDensity) {
   
   //Need hyp 0 in connectedHyp - Find empty hypothesis
+  VERBOSE(2,"Pruning lattice to edge density " << edgeDensity << endl);
   const Hypothesis* emptyHyp = connectedHyp.at(0);
   while (emptyHyp->GetId() != 0) {
     emptyHyp = emptyHyp->GetPrevHypo();
@@ -111,8 +167,10 @@ void pruneLatticeFB(Lattice & connectedHyp, map < const Hypothesis*, set <const 
   
   set <const Hypothesis*> survivingHyps; //store hyps that make the cut in this
   
-  size_t numEdgesTotal = edgeDensity * connectedHyp[0]->GetWordsBitmap().GetSize();
+  VERBOSE(2, "BEST HYPO TARGET LENGTH : " << bestHypo->GetSize() << endl)
+  size_t numEdgesTotal = edgeDensity * bestHypo->GetSize(); //as per Shankar, aim for (density * target length of MAP solution) arcs 
   size_t numEdgesCreated = 0;
+  VERBOSE(2, "Target edge count: " << numEdgesTotal << endl);
 
   float prevScore = -999999;
   
@@ -200,7 +258,7 @@ void pruneLatticeFB(Lattice & connectedHyp, map < const Hypothesis*, set <const 
     connectedHyp.push_back(*it);
   }
   
-  VERBOSE(3, "Done! Num edges created : "<< numEdgesCreated << ", numEdges wanted " << numEdgesTotal << endl)
+  VERBOSE(2, "Done! Num edges created : "<< numEdgesCreated << ", numEdges wanted " << numEdgesTotal << endl)
   
   IFVERBOSE(3) {
     cerr << "Surviving hyps: " ;
@@ -209,17 +267,24 @@ void pruneLatticeFB(Lattice & connectedHyp, map < const Hypothesis*, set <const 
     }
     cerr << endl;
   }
+  
+  
 }
     
-/*vector<Word>  calcMBRSol(Lattice & connectedHyp, map<Phrase, float>& finalNgramScores, const vector<float> & thetas, float p, float r) {
-  vector<Word> bestHyp;
-  return bestHyp;
-}*/
-
-
-void calcNgramPosteriors(Lattice & connectedHyp, map<const Hypothesis*, vector<Edge> >& incomingEdges, float scale, map<Phrase, float>& finalNgramScores) {
+void calcNgramExpectations(Lattice & connectedHyp, map<const Hypothesis*, vector<Edge> >& incomingEdges, 
+                         float scale, map<Phrase, float>& finalNgramScores, bool posteriors) {
   
   sort(connectedHyp.begin(),connectedHyp.end(),ascendingCoverageCmp); //sort by increasing source word cov
+  
+  /*cerr << "Lattice:" << endl;
+  for (Lattice::const_iterator i = connectedHyp.begin(); i != connectedHyp.end(); ++i) {
+      const Hypothesis* h = *i;
+      cerr << *h << endl;
+      const vector<Edge>& edges = incomingEdges[h];
+      for (size_t e = 0; e < edges.size(); ++e) {
+          cerr << edges[e];
+      }
+  }*/
   
   map<const Hypothesis*, float> forwardScore;
   forwardScore[connectedHyp[0]] = 0.0f; //forward score of hyp 0 is 1 (or 0 in logprob space)
@@ -262,11 +327,17 @@ void calcNgramPosteriors(Lattice & connectedHyp, map<const Hypothesis*, vector<E
         for (PathCounts::const_iterator pathCountIt = pathCounts.begin(); pathCountIt != pathCounts.end(); ++pathCountIt) {
           //Score of an n-gram is forward score of head node of leftmost edge + all edge scores
           const Path&  path = pathCountIt->first;
+          //cerr << "path count for " << ngram << " is " << pathCountIt->second << endl;
           float score = forwardScore[path[0]->GetTailNode()]; 
           for (size_t i = 0; i < path.size(); ++i) {
             score += path[i]->GetScore();
           }
-          ngramScores.addScore(currHyp,ngram,score);
+          //if we're doing expectations, then the number of times the ngram
+          //appears on the path is relevant.
+          size_t count = posteriors ? 1 : pathCountIt->second;
+          for (size_t k = 0; k < count; ++k) {
+            ngramScores.addScore(currHyp,ngram,score);
+          }
         }
       }
       
@@ -277,7 +348,8 @@ void calcNgramPosteriors(Lattice & connectedHyp, map<const Hypothesis*, vector<E
         float currNgramScore = it->second;
         VERBOSE(4, "Calculating score for: " << currNgram << endl)
         
-        if (incomingPhrases.find(currNgram) == incomingPhrases.end()) {
+        // For posteriors, don't double count ngrams
+        if (!posteriors || incomingPhrases.find(currNgram) == incomingPhrases.end()) {
           float score = edge.GetScore() + currNgramScore;
           ngramScores.addScore(currHyp,currNgram,score);
         }
@@ -315,7 +387,7 @@ void calcNgramPosteriors(Lattice & connectedHyp, map<const Hypothesis*, vector<E
   for (map<Phrase, float>::iterator finalScoresIt = finalNgramScores.begin();  finalScoresIt != finalNgramScores.end(); ++finalScoresIt) {
     finalScoresIt->second =  finalScoresIt->second * scale - Z;
     IFVERBOSE(2) {
-      cout << finalScoresIt->first << " [" << finalScoresIt->second << "]" << endl;
+      VERBOSE(2,finalScoresIt->first << " [" << finalScoresIt->second << "]" << endl);
     }
   }
   
@@ -421,78 +493,9 @@ bool ascendingCoverageCmp(const Hypothesis* a, const Hypothesis* b) {
   return a->GetWordsBitmap().GetNumWordsCovered() <  b->GetWordsBitmap().GetNumWordsCovered();
 }
 
-vector<Word>  calcMBRSol(const TrellisPathList& nBestList, map<Phrase, float>& finalNgramScores, const vector<float> & thetas, float p, float r){
-  
-  vector<float> mbrThetas = thetas;
-  if (thetas.size() == 0) { //thetas not specified on the command line, use p and r instead
-    mbrThetas.push_back(-1); //Theta 0
-    mbrThetas.push_back(1/(bleu_order*p));
-    for (size_t i = 2; i <= bleu_order; ++i){
-      mbrThetas.push_back(mbrThetas[i-1] / r);  
-    }
-  }
-  IFVERBOSE(2) {  
-  cout << "Thetas: ";
-  for (size_t i = 0; i < mbrThetas.size(); ++i) {
-    cout << mbrThetas[i] << " ";
-  }
-  cout << endl;
-  }
-  
-  float argmaxScore = -1e20;
-  TrellisPathList::const_iterator iter;
-  size_t ctr = 0;
-  
-  vector<Word> argmaxTranslation;
-  for (iter = nBestList.begin() ; iter != nBestList.end() ; ++iter, ++ctr)
-  {
-    const TrellisPath &path = **iter;
-    // get words in translation
-    vector<Word> translation;
-    GetOutputWords(path, translation);
-    
-    // collect n-gram counts
-    map < Phrase, int > counts;
-    extract_ngrams(translation,counts);
-    
-    //Now score this translation
-    float mbrScore = mbrThetas[0] * translation.size();
-    
-    float ngramScore = 0;
-    
-    for (map < Phrase, int >::iterator ngrams = counts.begin(); ngrams != counts.end(); ++ngrams) {
-      float ngramPosterior = UNKNGRAMLOGPROB; 
-      map<Phrase,float>::const_iterator ngramPosteriorIt = finalNgramScores.find(ngrams->first);
-      if (ngramPosteriorIt != finalNgramScores.end()) {
-        ngramPosterior = ngramPosteriorIt->second;
-      }
-          
-      if (ngramScore == 0) {
-        ngramScore = log((double) ngrams->second) + ngramPosterior + log(mbrThetas[(ngrams->first).GetSize()]);
-      }
-      else {
-        ngramScore = log_sum(ngramScore, float(log((double) ngrams->second) + ngramPosterior + log(mbrThetas[(ngrams->first).GetSize()])));
-      }
-      //cout << "Ngram: " << ngrams->first << endl;
-    } 
-
-    mbrScore += exp(ngramScore);
-
-    if (mbrScore > argmaxScore){
-      argmaxScore = mbrScore;
-      IFVERBOSE(2) {
-        cout << "HYP " << ctr << " IS NEW BEST: ";
-        for (size_t i = 0; i < translation.size(); ++i)
-          cout << translation[i]  ;
-        cout << "[" << argmaxScore << "]" << endl;    
-      }
-      argmaxTranslation = translation;
-    }
-  }
-  return argmaxTranslation;
-}
-
-vector<Word> doLatticeMBR(Manager& manager) {
+void getLatticeMBRNBest(Manager& manager, TrellisPathList& nBestList, 
+                        vector<LatticeMBRSolution>& solutions, size_t n) 
+{
     const StaticData& staticData = StaticData::Instance();
     std::map < int, bool > connected;
     std::vector< const Hypothesis *> connectedList;
@@ -501,30 +504,141 @@ vector<Word> doLatticeMBR(Manager& manager) {
     map<const Hypothesis*, vector<Edge> > incomingEdges;
     vector< float> estimatedScores;
     manager.GetForwardBackwardSearchGraph(&connected, &connectedList, &outgoingHyps, &estimatedScores);
-    pruneLatticeFB(connectedList, outgoingHyps, incomingEdges, estimatedScores, staticData.GetLatticeMBRPruningFactor());
-    calcNgramPosteriors(connectedList, incomingEdges, staticData.GetMBRScale(), ngramPosteriors);      
-    vector<Word> mbrBestHypo;
-    if (!staticData.UseLatticeHypSetForLatticeMBR()) {
-        size_t nBestSize = staticData.GetMBRSize();
-        if (nBestSize <= 0)
-        {
-            cerr << "ERROR: negative size for number of MBR candidate translations not allowed (option mbr-size)" << endl;
-            exit(1);
+    pruneLatticeFB(connectedList, outgoingHyps, incomingEdges, estimatedScores, manager.GetBestHypothesis(), staticData.GetLatticeMBRPruningFactor());
+    calcNgramExpectations(connectedList, incomingEdges, staticData.GetMBRScale(), ngramPosteriors,true);
+    
+    vector<float> mbrThetas = staticData.GetLatticeMBRThetas();
+    float p = staticData.GetLatticeMBRPrecision();
+    float r = staticData.GetLatticeMBRPRatio();
+    float mapWeight = staticData.GetLatticeMBRMapWeight();
+    if (mbrThetas.size() == 0) { //thetas not specified on the command line, use p and r instead
+        mbrThetas.push_back(-1); //Theta 0
+        mbrThetas.push_back(1/(bleu_order*p));
+        for (size_t i = 2; i <= bleu_order; ++i){
+            mbrThetas.push_back(mbrThetas[i-1] / r);  
         }
-        else
-        {
-            TrellisPathList nBestList;
-            manager.CalcNBest(nBestSize, nBestList,true);
-            VERBOSE(2,"size of n-best: " << nBestList.GetSize() << " (" << nBestSize << ")" << endl);
-            IFVERBOSE(2) { PrintUserTime("calculated n-best list for MBR decoding"); }
-            mbrBestHypo = calcMBRSol(nBestList, ngramPosteriors, staticData.GetLatticeMBRThetas(), 
-                                     staticData.GetLatticeMBRPrecision(), staticData.GetLatticeMBRPRatio());
-        }
-    }  
-    else {
-        cerr << "Using Lattice for Hypothesis set not yet implemented" << endl;
-        exit(1);
     }
-    return mbrBestHypo;
+    IFVERBOSE(2) {  
+        VERBOSE(2,"Thetas: ");
+        for (size_t i = 0; i < mbrThetas.size(); ++i) {
+            VERBOSE(2,mbrThetas[i] << " ");
+        }
+        VERBOSE(2,endl);
+    }
+    TrellisPathList::const_iterator iter;
+    size_t ctr = 0;
+    LatticeMBRSolutionComparator comparator;
+    for (iter = nBestList.begin() ; iter != nBestList.end() ; ++iter, ++ctr)
+    {
+        const TrellisPath &path = **iter;
+        solutions.push_back(LatticeMBRSolution(path,iter==nBestList.begin()));
+        solutions.back().CalcScore(ngramPosteriors,mbrThetas,mapWeight);
+        sort(solutions.begin(), solutions.end(), comparator);
+        while (solutions.size() > n) {
+            solutions.pop_back();
+        }
+    }
+    VERBOSE(2,"LMBR Score: " << solutions[0].GetScore() << endl);
 }
+
+vector<Word> doLatticeMBR(Manager& manager, TrellisPathList& nBestList) {
+
+    vector<LatticeMBRSolution> solutions;
+    getLatticeMBRNBest(manager, nBestList, solutions,1);
+    return solutions.at(0).GetWords();
+}
+
+vector<Word> doConsensusDecoding(Manager& manager, TrellisPathList& nBestList) {
+    static const int BLEU_ORDER = 4;
+    static const float SMOOTH = 1;
+    
+    //calculate the ngram expectations
+    const StaticData& staticData = StaticData::Instance();
+    std::map < int, bool > connected;
+    std::vector< const Hypothesis *> connectedList;
+    map<Phrase, float> ngramExpectations;
+    std::map < const Hypothesis*, set <const Hypothesis*> > outgoingHyps;
+    map<const Hypothesis*, vector<Edge> > incomingEdges;
+    vector< float> estimatedScores;
+    manager.GetForwardBackwardSearchGraph(&connected, &connectedList, &outgoingHyps, &estimatedScores);
+    pruneLatticeFB(connectedList, outgoingHyps, incomingEdges, estimatedScores, manager.GetBestHypothesis(), staticData.GetLatticeMBRPruningFactor());
+    calcNgramExpectations(connectedList, incomingEdges, staticData.GetMBRScale(), ngramExpectations,false);
+    
+    //expected length is sum of expected unigram counts
+    float ref_length = 0.0f;
+    for (map<Phrase,float>::const_iterator ref_iter = ngramExpectations.begin(); 
+         ref_iter != ngramExpectations.end(); ++ref_iter) {
+        if (ref_iter->first.GetSize() == 1) {
+            ref_length += exp(ref_iter->second);
+            //cerr << "Expected for " << ref_iter->first << " is " << exp(ref_iter->second) << endl;
+        }
+    }
+    
+    VERBOSE(2,"REF Length: " << ref_length << endl);
+
+    //use the ngram expectations to rescore the nbest list.
+    TrellisPathList::const_iterator iter;
+    TrellisPathList::const_iterator best = nBestList.end();
+    float bestScore = -100000;
+    for (iter = nBestList.begin() ; iter != nBestList.end() ; ++iter)
+    {
+        const TrellisPath &path = **iter;
+        vector<Word> words;
+        map<Phrase,int> ngrams;
+        GetOutputWords(path,words);
+        extract_ngrams(words,ngrams);
+        
+        vector<float> comps(2*BLEU_ORDER+1);
+        float logbleu = 0.0;
+        float brevity = 0.0;
+        int hyp_length = words.size();
+        for (int i = 0; i < BLEU_ORDER; ++i) {
+            comps[2*i] = 0.0;
+            comps[2*i+1] = max(hyp_length-i,0);
+        }
+        
+        for (map<Phrase,int>::const_iterator hyp_iter = ngrams.begin(); 
+             hyp_iter != ngrams.end(); ++hyp_iter) {
+                map<Phrase,float>::const_iterator ref_iter = ngramExpectations.find(hyp_iter->first);
+                if (ref_iter != ngramExpectations.end()) {
+                    comps[2*(hyp_iter->first.GetSize()-1)] += min(exp(ref_iter->second), (float)(hyp_iter->second));
+                }
+            
+        }
+        comps[comps.size()-1] = ref_length; 
+        
+        if (comps[0] == 0) {
+            continue;
+        }
+        for (int i=0; i<BLEU_ORDER; i++)
+        {
+            if ( i > 0 ) {
+                logbleu += log((float)comps[2*i]+SMOOTH)-log((float)comps[2*i+1]+SMOOTH);
+            } else {
+                logbleu += log((float)comps[2*i])-log((float)comps[2*i+1]);
+            }
+        }
+        logbleu /= BLEU_ORDER;
+        brevity = 1.0-(float)comps[comps.size()-1]/comps[1]; // comps[comps_n-1] is the ref length, comps[1] is the test length
+        if (brevity < 0.0) {
+            logbleu += brevity;
+        }
+        float score =  exp(logbleu);
+        
+        if (score > bestScore) {
+            bestScore = score;
+            best = iter;
+            VERBOSE(2,"NEW BEST: " << score << endl);
+            //for (size_t i = 0; i < comps.size(); ++i) {
+            //    cerr << comps[i] << " ";
+            //}
+            //cerr << endl;
+        }
+    }
+    
+    vector<Word> bestWords;
+    GetOutputWords(**best,bestWords);
+    return bestWords;
+}
+
 

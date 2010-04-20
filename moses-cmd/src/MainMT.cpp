@@ -1,4 +1,4 @@
-// $Id:  $
+// $Id: MainMT.cpp 3045 2010-04-05 13:07:29Z hieuhoang1972 $
 
 /***********************************************************************
 Moses - factored phrase-based language decoder
@@ -137,20 +137,30 @@ class TranslationTask : public Task {
                     if (nBestSize <= 0) {
                         cerr << "ERROR: negative size for number of MBR candidate translations not allowed (option mbr-size)" << endl;
                         exit(1);
-                    } 
+                    }
+                    TrellisPathList nBestList;
+                    manager.CalcNBest(nBestSize, nBestList,true);
+                    VERBOSE(2,"size of n-best: " << nBestList.GetSize() << " (" << nBestSize << ")" << endl);
+                    IFVERBOSE(2) { PrintUserTime("calculated n-best list for (L)MBR decoding"); }
                     
                     if (staticData.UseLatticeMBR()) {
-                        //Lattice MBR decoding
-                        vector<Word> mbrBestHypo = doLatticeMBR(manager); 
-                        OutputBestHypo(mbrBestHypo, m_lineNumber, staticData.GetReportSegmentation(),
-                                       staticData.GetReportAllFactors(),out);
-                        IFVERBOSE(2) { PrintUserTime("finished Lattice MBR decoding"); }
+                        if (m_nbestCollector) {
+                            //lattice mbr nbest
+                            vector<LatticeMBRSolution> solutions;
+                            size_t n  = min(nBestSize, staticData.GetNBestSize());
+                            getLatticeMBRNBest(manager,nBestList,solutions,n);
+                            ostringstream out;
+                            OutputLatticeMBRNBest(out, solutions,m_lineNumber);
+                            m_nbestCollector->Write(m_lineNumber, out.str());
+                        } else {
+                            //Lattice MBR decoding
+                            vector<Word> mbrBestHypo = doLatticeMBR(manager,nBestList); 
+                            OutputBestHypo(mbrBestHypo, m_lineNumber, staticData.GetReportSegmentation(),
+                                        staticData.GetReportAllFactors(),out);
+                            IFVERBOSE(2) { PrintUserTime("finished Lattice MBR decoding"); }
+                        }
                     } else {
                         //MBR decoding
-                        TrellisPathList nBestList;
-                        manager.CalcNBest(nBestSize, nBestList,true);
-                        VERBOSE(2,"size of n-best: " << nBestList.GetSize() << " (" << nBestSize << ")" << endl);
-                        IFVERBOSE(2) { PrintUserTime("calculated n-best list for MBR decoding"); }
                         std::vector<const Factor*> mbrBestHypo = doMBR(nBestList);
                         OutputBestHypo(mbrBestHypo, m_lineNumber,
                                     staticData.GetReportSegmentation(),
@@ -161,7 +171,7 @@ class TranslationTask : public Task {
                 }
                 m_outputCollector->Write(m_lineNumber,out.str(),debug.str());
             }
-            if (m_nbestCollector) {
+            if (m_nbestCollector && !staticData.UseLatticeMBR()) {
                 TrellisPathList nBestList;
                 ostringstream out;
                 manager.CalcNBest(staticData.GetNBestSize(), nBestList,staticData.GetDistinctNBest());

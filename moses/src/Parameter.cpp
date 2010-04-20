@@ -42,6 +42,7 @@ Parameter::Parameter()
 	AddParam("beam-threshold", "b", "threshold for threshold pruning");
 	AddParam("config", "f", "location of the configuration file");
 	AddParam("drop-unknown", "du", "drop unknown words instead of copying them");
+  AddParam("disable-discarding", "dd", "disable hypothesis discarding");
 	AddParam("factor-delimiter", "fd", "specify a different factor delimiter than the default");
 	AddParam("generation-file", "location and properties of the generation table");
 	AddParam("global-lexical-file", "gl", "discriminatively trained global lexical translation model file");
@@ -59,6 +60,7 @@ Parameter::Parameter()
 	AddParam("max-phrase-length", "maximum phrase length (default 20)");
 	AddParam("n-best-list", "file and size of n-best-list to be generated; specify - as the file in order to write to STDOUT");
 	AddParam("n-best-factor", "factor to compute the maximum number of contenders (=factor*nbest-size). value 0 means infinity, i.e. no threshold. default is 0");
+  AddParam("print-all-derivations", "to print all derivations in search graph");
 	AddParam("output-factors", "list of factors in the output");
 	AddParam("phrase-drop-allowed", "da", "if present, allow dropping of source words"); //da = drop any (word); see -du for comparison
 	AddParam("report-all-factors", "report all factors in output, not just first");
@@ -91,12 +93,14 @@ Parameter::Parameter()
 	AddParam("xml-input", "xi", "allows markup of input with desired translations and probabilities. values can be 'pass-through' (default), 'inclusive', 'exclusive', 'ignore'");
  	AddParam("minimum-bayes-risk", "mbr", "use miminum Bayes risk to determine best translation");
   AddParam("lminimum-bayes-risk", "lmbr", "use lattice miminum Bayes risk to determine best translation");
+  AddParam("consensus-decoding", "con", "use consensus decoding (De Nero et. al. 2009)");
 	AddParam("mbr-size", "number of translation candidates considered in MBR decoding (default 200)");
  	AddParam("mbr-scale", "scaling factor to convert log linear score probability in MBR decoding (default 1.0)");
   AddParam("lmbr-thetas", "theta(s) for lattice mbr calculation");
   AddParam("lmbr-pruning-factor", "average number of nodes/word wanted in pruned lattice");
   AddParam("lmbr-p", "unigram precision value for lattice mbr");
   AddParam("lmbr-r", "ngram precision decay value for lattice mbr");
+  AddParam("lmbr-map-weight", "weight given to map solution when doing lattice MBR (default 0)");
   AddParam("lattice-hypo-set", "to use lattice as hypo set during lattice MBR");
 	AddParam("use-persistent-cache", "cache translation options across sentences (default true)");
 	AddParam("persistent-cache-size", "maximum size of cache for translation options (default 10,000 input phrases)");
@@ -118,6 +122,14 @@ Parameter::Parameter()
 	AddParam("print-alignment-info-in-n-best", "Include word-to-word alignment in the n-best list. Word-to-word alignments are takne from the phrase table if any. Default is false");
 	AddParam("link-param-count", "Number of parameters on word links when using confusion networks or lattices (default = 1)");
 	AddParam("description", "Source language, target language, description");
+
+	AddParam("max-chart-span", "maximum num. of source word chart rules can consume (default 10)");
+	AddParam("non-terminals", "list of non-term symbols, space separated");
+	AddParam("rule-limit", "a little like table limit. But for chart decoding rules. Default is DEFAULT_MAX_TRANS_OPT_SIZE");
+	AddParam("source-label-overlap", "What happens if a span already has a label. 0=add more. 1=replace. 2=discard. Default is 0");
+	AddParam("glue-rule-type", "Left branching, or both branching. 0=left. 2=both. 1=right(not implemented). Default=0");
+	AddParam("output-hypo-score", "Output the hypo score to stdout with the output string. For search error analysis. Default is false");
+	AddParam("unknown-lhs", "file containing target lhs of unknown words. 1 per line: LHS prob");
 }
 
 Parameter::~Parameter()
@@ -298,7 +310,7 @@ bool Parameter::Validate()
 	  ext.push_back(".gz");
 		// alternative file extension for binary phrase table format:
 		ext.push_back(".binphr.idx");
-		noErrorFlag = FilesExist("ttable-file", 3,ext);
+		noErrorFlag = FilesExist("ttable-file", 4,ext);
 	}
 	// language model
 //	if (noErrorFlag)

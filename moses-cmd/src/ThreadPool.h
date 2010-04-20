@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: ThreadPool.h 3045 2010-04-05 13:07:29Z hieuhoang1972 $
 
 /***********************************************************************
 Moses - factored phrase-based language decoder
@@ -19,7 +19,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_cmd_ThreadPool_h
+#define moses_cmd_ThreadPool_h
 
 #include <iostream>
 #include <queue>
@@ -114,3 +115,4 @@ class TestTask : public Task {
 
 
 }
+#endif

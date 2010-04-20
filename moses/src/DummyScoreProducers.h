@@ -1,7 +1,7 @@
 // $Id$
 
-#ifndef _DUMMY_SCORE_PRODUCERS_H_
-#define _DUMMY_SCORE_PRODUCERS_H_
+#ifndef moses_DummyScoreProducers_h
+#define moses_DummyScoreProducers_h
 
 #include "FeatureFunction.h"
 
@@ -24,7 +24,7 @@ public:
 	std::string GetScoreProducerWeightShortName() const;
 	size_t GetNumInputScores() const;
 
-	virtual const FFState* EmptyHypothesisState() const;
+	virtual const FFState* EmptyHypothesisState(const InputType &input) const;
 
   virtual FFState* Evaluate(
     const Hypothesis& cur_hypo,

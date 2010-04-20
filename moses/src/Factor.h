@@ -19,7 +19,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_Factor_h
+#define moses_Factor_h
 
 #include <sstream>
 #include <iostream>
@@ -41,11 +42,6 @@ class FactorCollection;
  * A Factor object is a tuple of direction (Input or Output,
  * corresponding to French or English), a type (surface form,
  * POS, stem, etc), and the value of the factor.
- *
- * @TODO I find this design problematic- essentially, a factor should
- * just be a value type and the factor type and "direction"
- * should be the keys in a larger identification system that
- * find instances of specific factors.
  *
  */
 class Factor
@@ -143,3 +139,4 @@ public:
 
 
 }
+#endif

@@ -1,5 +1,5 @@
-#ifndef WORDLATTICE_H_
-#define WORDLATTICE_H_
+#ifndef moses_WordLattice_h
+#define moses_WordLattice_h
 
 #include <vector>
 #include "ConfusionNet.h"
@@ -29,6 +29,13 @@ public:
 	 * @note edges[1][2] means there is an edge from 1 to 2
 	 */
 	void GetAsEdgeMatrix(std::vector<std::vector<bool> >& edges) const;
+	
+    const LabelList &GetLabelList(size_t /*startPos*/, size_t /*endPos*/) const
+	{
+		assert(false);
+		return *(new LabelList());
+	}
+	
 };
 
 }

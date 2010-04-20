@@ -1,12 +1,14 @@
 // $Id$
 // vim:tabstop=2
 
-#pragma once
+#ifndef moses_PDTAimp_h
+#define moses_PDTAimp_h
 
 #include "StaticData.h"  // needed for factor splitter
 
 namespace Moses
 {
+using namespace std;
 
 inline bool existsFile(const char* filePath) {
   struct stat mystat;
@@ -542,3 +544,4 @@ public:
 };
 
 }
+#endif

@@ -20,7 +20,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_PhraseDictionaryMemory_h
+#define moses_PhraseDictionaryMemory_h
 
 #include "PhraseDictionary.h"
 #include "PhraseDictionaryNode.h"
@@ -63,8 +64,16 @@ public:
   virtual void InitializeForInput(InputType const&) 
     {/* Don't do anything source specific here as this object is shared between threads.*/}
 	
+  const ChartRuleCollection *GetChartRuleCollection(InputType const& /*src*/, WordsRange const& /*range*/,
+          bool /*adhereTableLimit*/,const CellCollection &/*cellColl*/) const
+	{
+		assert(false);
+		return NULL;
+	}
+
 	TO_STRING();
 	
 };
 
 }
+#endif

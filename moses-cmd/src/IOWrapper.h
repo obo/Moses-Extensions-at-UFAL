@@ -32,7 +32,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 // example file on how to use moses library
 
-#pragma once
+#ifndef moses_cmd_IOWrapper_h
+#define moses_cmd_IOWrapper_h
 
 #include <fstream>
 #include <ostream>
@@ -47,6 +48,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "InputFileStream.h"
 #include "InputType.h"
 #include "WordLattice.h"
+#include "LatticeMBR.h"
 
 class IOWrapper
 {
@@ -88,6 +90,7 @@ public:
 	
     void OutputBestHypo(const Moses::Hypothesis *hypo, long translationId, bool reportSegmentation, bool reportAllFactors);
 	void OutputNBestList(const Moses::TrellisPathList &nBestList, long translationId);
+    void OutputLatticeMBRNBestList(const std::vector<LatticeMBRSolution>& solutions,long translationId);
 	void Backtrack(const Moses::Hypothesis *hypo);
 
 	void ResetTranslationId() { m_translationId = 0; }
@@ -106,7 +109,10 @@ IOWrapper *GetIODevice(const Moses::StaticData &staticData);
 bool ReadInput(IOWrapper &ioWrapper, Moses::InputTypeEnum inputType, Moses::InputType*& source);
 void OutputSurface(std::ostream &out, const Moses::Hypothesis *hypo, const std::vector<Moses::FactorType> &outputFactorOrder ,bool reportSegmentation, bool reportAllFactors);
 void OutputNBest(std::ostream& out, const Moses::TrellisPathList &nBestList, const std::vector<Moses::FactorType>&, long translationId);
+void OutputLatticeMBRNBest(std::ostream& out, const std::vector<LatticeMBRSolution>& solutions,long translationId);
 void OutputBestHypo(const std::vector<const Moses::Factor*>&  mbrBestHypo, long translationId, 
                     bool reportSegmentation, bool reportAllFactors, std::ostream& out);
 void OutputBestHypo(const std::vector<Moses::Word>&  mbrBestHypo, long /*translationId*/, 
                         bool reportSegmentation, bool reportAllFactors, std::ostream& out);
+
+#endif

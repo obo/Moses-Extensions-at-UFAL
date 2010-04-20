@@ -19,7 +19,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_ScoreComponentCollection_h
+#define moses_ScoreComponentCollection_h
 
 #include <numeric>
 #include <cassert>
@@ -140,6 +141,11 @@ public:
 		}  
 	}
 
+	void Assign(const ScoreComponentCollection &copy)
+	{
+		m_scores =  copy.m_scores;
+	}
+	
 	//! Special version PlusEquals(ScoreProducer, vector<float>)
 	//! to add the score from a single ScoreProducer that produces
 	//! a single value
@@ -191,6 +197,11 @@ public:
 		return m_scores[begin];
 	}
 
+	float GetWeightedScore() const;
+
+	void ZeroAllLM();
+	void PlusEqualsAllLM(const ScoreComponentCollection& rhs);
+
 };
 
 inline std::ostream& operator<<(std::ostream& os, const ScoreComponentCollection& rhs)
@@ -203,3 +214,4 @@ inline std::ostream& operator<<(std::ostream& os, const ScoreComponentCollection
 
 
 }
+#endif

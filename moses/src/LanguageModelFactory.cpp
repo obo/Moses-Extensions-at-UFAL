@@ -43,7 +43,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "LanguageModelInternal.h"
 #include "LanguageModelSkip.h"
 #include "LanguageModelJoint.h"
-#include "LanguageModelParalellBackoff.h"
+#include "LanguageModelParallelBackoff.h"
 
 using namespace std;
 
@@ -110,9 +110,9 @@ namespace LanguageModelFactory
 																		, scoreIndexManager);
 				#endif
 				break;
-			case ParalellBackoff:
+			case ParallelBackoff:
 				#ifdef LM_SRI
-					lm = new LanguageModelParalellBackoff(true, scoreIndexManager);
+					lm = new LanguageModelParallelBackoff(true, scoreIndexManager);
 				#endif
 					break;
 	  	case Internal:

@@ -1,7 +1,8 @@
 // $Id$
 
-#ifndef PHRASEDICTIONARYTREE_H_
-#define PHRASEDICTIONARYTREE_H_
+#ifndef moses_PhraseDictionaryTree_h
+#define moses_PhraseDictionaryTree_h
+
 #include <string>
 #include <vector>
 #include <iostream>
@@ -17,6 +18,7 @@
 #include "PrefixTree.h"
 #include "File.h"
 #include "ObjectPool.h"
+#include "LexicalReorderingTable.h"
 #include "LVoc.h"
 #include "TypeDef.h"
 #include "Util.h"
@@ -28,12 +30,9 @@ namespace Moses
 class Phrase;
 class Word;
 class ConfusionNet;
-
+class PDTimp;
 
 typedef PrefixTreeF<LabelId,OFF_T> PTF;
-
-class PDTimp;
-class PPimp;
 
 class PhraseDictionaryTree : public Dictionary {
 	PDTimp *imp; //implementation
@@ -129,4 +128,5 @@ public:
 
 
 }
-#endif /*PHRASEDICTIONARYTREE_H_*/
+
+#endif

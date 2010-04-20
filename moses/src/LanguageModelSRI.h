@@ -19,18 +19,19 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_LanguageModelSRI_h
+#define moses_LanguageModelSRI_h
 
 #include <string>
 #include <vector>
 #include "Factor.h"
 #include "TypeDef.h"
 #include "Vocab.h"
+#include "Ngram.h"
 #include "LanguageModelSingleFactor.h"
 
 class Factor;
 class Phrase;
-class Ngram; // SRI forward decl
 
 namespace Moses
 {
@@ -39,7 +40,7 @@ class LanguageModelSRI : public LanguageModelSingleFactor
 {
 protected:
 	std::vector<VocabIndex> m_lmIdLookup;
-	Vocab 			*m_srilmVocab;
+	::Vocab			*m_srilmVocab;
 	Ngram 			*m_srilmModel;
 	VocabIndex	m_unknownId;
 
@@ -61,3 +62,4 @@ public:
 
 
 }
+#endif
