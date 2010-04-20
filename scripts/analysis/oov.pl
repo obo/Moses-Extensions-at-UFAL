@@ -50,7 +50,9 @@ while (<$fh>) {
   }
 }
 my $testtypes = scalar(keys(%needed));
-print STDERR "Test set: $nr sents, $testtypes unique $n-grams, $testtokens total $n-grams\n";
+print "Test set sents\t$nr\n";
+print "Test set running $n-grams\t$testtokens\n";
+print "Test set unique $n-grams\t$testtypes\n";
 
 my %seen;
 $nr = 0;
@@ -73,7 +75,9 @@ foreach my $ngr (keys %needed) {
 }
 print STDERR "Done.\n";
 my $traintypes = scalar(keys(%seen));
-print STDERR "Training set: $nr sents, $traintypes unique $n-grams, $traintokens total $n-grams\n";
+print "Training set sents\t$nr\n";
+print "Training set running $n-grams\t$traintokens\n";
+print "Training set unique $n-grams\t$traintypes\n";
 
 
 my $oovtypes = scalar(keys(%needed));
