@@ -539,8 +539,8 @@ public:
 
 	const TranslationOptionList* FindTransOptListInCache(const DecodeGraph &decodeGraph, const Phrase &sourcePhrase) const;
   
-	bool PrintAllDerivations() const { return m_printAllDerivations;}
-
+  bool PrintAllDerivations() const { return m_printAllDerivations;}
+	
 	const UnknownLHSList &GetUnknownLHS() const
 	{ return m_unknownLHS; }
 
