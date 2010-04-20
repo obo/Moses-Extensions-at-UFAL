@@ -18,16 +18,6 @@ my $SCRIPTS_ROOTDIR = $Bin;
 $SCRIPTS_ROOTDIR =~ s/\/training$//;
 $SCRIPTS_ROOTDIR = $ENV{"SCRIPTS_ROOTDIR"} if defined($ENV{"SCRIPTS_ROOTDIR"});
 
-if( !defined $ENV{"TMT_ROOT"}) {
-  die "Cannot find TMT_ROOT. Is TectoMT really initialized?";
-}
-my $TMT_ROOT = $ENV{"TMT_ROOT"};
-
-my $srunblocks = "$TMT_ROOT/tools/srunblocks_streaming/srunblocks";
-my $scenario_file = "scenario"; 
-my $srunblocks_cmd = "$srunblocks $scenario_file czech_source_sentence factored_output";
-
-
 # for each _d_istortion, _l_anguage _m_odel, _t_ranslation _m_odel and _w_ord penalty, there is a list
 # of [ default value, lower bound, upper bound ]-triples. In most cases, only one triple is used,
 # but the translation model has currently 5 features
@@ -236,6 +226,22 @@ Options:
 ";
   exit 1;
 }
+
+# ensure we know where is tectomt, if we need it
+if( !defined $ENV{"TMT_ROOT"} && $___EXTRACT_SEMPOS =~ /tmt/) {
+  die "Cannot find TMT_ROOT. Is TectoMT really initialized?";
+}
+my $TMT_ROOT = $ENV{"TMT_ROOT"};
+
+my $srunblocks = "$TMT_ROOT/tools/srunblocks_streaming/srunblocks";
+my $scenario_file = "scenario"; 
+my $qruncmd = "/home/bojar/diplomka/bin/qruncmd";
+my $srunblocks_cmd = "$srunblocks --errorlevel=FATAL $scenario_file czech_source_sentence factored_output";
+if (defined $___JOBS && $___JOBS > 1) {
+  die "Can't run $qruncmd" if ! -x $qruncmd;
+  $srunblocks_cmd = "$qruncmd --jobs=$___JOBS --join '$srunblocks_cmd'";
+}
+
 
 # update variables if input is confusion network
 if ($___INPUTTYPE == 1)
@@ -641,7 +647,7 @@ FILE_EOF
 # run TectoMT to analyze sentences
 print STDERR "Analyzing candidates using $srunblocks_cmd\n"; 
 my \$nbest_factored = "$nbest_file.factored";
-open( NBEST_FACTORED, "|$srunblocks_cmd > \$nbest_factored 2>/dev/null") or die "Cannot open pipe to command $srunblocks_cmd";
+open( NBEST_FACTORED, "|$srunblocks_cmd > \$nbest_factored") or die "Cannot open pipe to command $srunblocks_cmd";
 FILE_EOF
 print DECODER_CMD <<'FILE_EOF';
 my $line_count = 0;
@@ -689,7 +695,6 @@ while( my $line = <NBEST_ORIG>) {
   print NBEST join( '|||', @array);
 }
 FILE_EOF
-
 } else {
   die "Unknown type of factor extraction: $___EXTRACT_SEMPOS";
 }
@@ -756,7 +761,7 @@ if( $___EXTRACT_SEMPOS =~ /tmt/) {
     open( REF_IN, "<$ref") or die "Cannot open $ref";
     my $ref_factored = "$ref.factored.$part";
     push( @references_factored, $ref_factored);
-    open( REF_FACTORED, "|$srunblocks_cmd > $ref_factored 2>/dev/null");
+    open( REF_FACTORED, "|$srunblocks_cmd > $ref_factored");
     while( my $line = <REF_IN>) {
       # analyze sentence via TectoMT using scenario in file $scerario_file
       print REF_FACTORED $line;

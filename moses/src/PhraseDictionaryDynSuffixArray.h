@@ -10,22 +10,26 @@ namespace Moses {
 
 class PhraseDictionaryDynSuffixArray: public PhraseDictionary {
 public: 
-	PhraseDictionaryDynSuffixArray(size_t numScoreComponent, PhraseDictionaryFeature* feature);
+	PhraseDictionaryDynSuffixArray(size_t m_numScoreComponent, PhraseDictionaryFeature* feature);
 	~PhraseDictionaryDynSuffixArray();
-	bool Load(string source, string target, string alignments
-						, const vector<float> &weight
-						, size_t tableLimit
+	bool Load( const std::vector<FactorType>& m_input
+						, const std::vector<FactorType>& m_output
+						, std::string m_source
+						, std::string m_target
+						, std::string m_alignments
+						, const std::vector<float> &m_weight
+						, size_t m_tableLimit
 						, const LMList &languageModels
 						, float weightWP);
 	// functions below required by base class
-	void SetWeightTransModel(const vector<float, std::allocator<float> >&);
+	void SetWeightTransModel(const std::vector<float, std::allocator<float> >&);
 	const TargetPhraseCollection* GetTargetPhraseCollection(const Phrase& src) const;
 	void InitializeForInput(const InputType& i);
 	void AddEquivPhrase(const Phrase &, const TargetPhrase &){}
 	void CleanUp();
 private:
 	BilingualDynSuffixArray *m_biSA;
-	vector<float> m_weight;
+	std::vector<float> m_weight;
 	size_t m_tableLimit;
 	const LMList *m_languageModels;
 	float m_weightWP;
