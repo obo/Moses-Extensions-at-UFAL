@@ -58,8 +58,8 @@ if (defined $srcfile) {
     }
   }
   close $fh;
-  print STDERR "Source set sents\t$nr\n";
-  print STDERR "Source set running $n-grams\t$srctokens\n";
+  print "Source set sents\t$nr\n";
+  print "Source set running $n-grams\t$srctokens\n";
   $srcfilelen = $nr;
 }
 
