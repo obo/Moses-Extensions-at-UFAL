@@ -201,7 +201,7 @@ int main(int argc, char* argv[])
 
 		IFVERBOSE(2) { PrintUserTime("Sentence Decoding Time:"); }
     
-		manager.CalcDecoderStatistics();    
+		manager.CalcDecoderStatistics();
 	} // while(ReadInput
 	
 	delete ioWrapper;
