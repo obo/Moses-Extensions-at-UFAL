@@ -85,7 +85,7 @@ StaticData::StaticData()
 	// memory pools
 	Phrase::InitializeMemPool();
 }
-
+	
 bool StaticData::LoadData(Parameter *parameter)
 {
 	ResetUserTime();
