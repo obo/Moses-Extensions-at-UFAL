@@ -80,6 +80,7 @@ public:
 		const std::vector<float> &weight);
 	void GetTargetPhrasesByLexicalWeight(const Phrase& src, std::vector< std::pair<Scores, TargetPhrase*> >& target) const;
 	void CleanUp();
+  void addSntPair(string& source, string& target, string& alignment);
 private:
 	DynSuffixArray* m_srcSA;
 	DynSuffixArray* m_trgSA;
@@ -104,6 +105,7 @@ private:
 		const FactorDirection& direction, std::vector<wordID_t>&, std::vector<wordID_t>&);
 	int LoadAlignments(InputFileStream& aligs);
 	int LoadRawAlignments(InputFileStream& aligs);
+	int LoadRawAlignments(string& aligs);
 
 	bool ExtractPhrases(const int&, const int&, const int&, std::vector<PhrasePair*>&, bool=false) const;
 	SentenceAlignment GetSentenceAlignment(const int, bool=false) const; 

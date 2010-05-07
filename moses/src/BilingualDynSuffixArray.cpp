@@ -78,6 +78,16 @@ int BilingualDynSuffixArray::LoadRawAlignments(InputFileStream& align)
 	}
 	return m_rawAlignments.size();
 }
+int BilingualDynSuffixArray::LoadRawAlignments(string& align) {
+  // stores the alignments in the raw file format 
+  vector<int> vtmp;
+  Utils::splitToInt(align, vtmp, "- ");
+  assert(vtmp.size() % 2 == 0);
+  vector<short> vAlgn;  // store as short ints for memory
+  iterate(vtmp, itr) vAlgn.push_back(short(*itr));
+  m_rawAlignments.push_back(vAlgn);
+  return m_rawAlignments.size();
+}
 
 int BilingualDynSuffixArray::LoadAlignments(InputFileStream& align) 
 {
@@ -408,6 +418,30 @@ std::vector<unsigned> BilingualDynSuffixArray::SampleSelection(std::vector<unsig
 	return subSample;
 }
 
+void BilingualDynSuffixArray::addSntPair(string& source, string& target, string& alignment) {
+  vuint_t srcFactor, trgFactor;
+  cerr << "source, target, alignment = " << source << ", " << target << ", " << alignment << endl;
+  std::istringstream sss(source), sst(target), ssa(alignment);
+  string word;
+  const unsigned oldSrcCrpSize = m_srcCorpus->size(), oldTrgCrpSize = m_trgCorpus->size();
+  m_vocab->MakeOpen();
+  while(sss >> word) { 
+    srcFactor.push_back(m_vocab->GetWordID(word));  // get vocab id
+    cerr << "srcFactor[" << (srcFactor.size() - 1) << "] = " << srcFactor.back() << endl;
+    m_srcCorpus->push_back(srcFactor.back()); // add word to corpus
+  }
+  m_srcSntBreaks.push_back(oldSrcCrpSize); // former end of corpus is index of new sentence 
+  while(sst >> word) {
+    trgFactor.push_back(m_vocab->GetWordID(word));
+    cerr << "trgFactor[" << (trgFactor.size() - 1) << "] = " << trgFactor.back() << endl;
+    m_trgCorpus->push_back(trgFactor.back());
+  }
+  m_trgSntBreaks.push_back(oldTrgCrpSize);
+  m_srcSA->InsertFactor(&srcFactor, oldSrcCrpSize);
+  m_trgSA->InsertFactor(&trgFactor, oldTrgCrpSize);
+  LoadRawAlignments(alignment);
+  m_vocab->MakeClosed();
+}
 SentenceAlignment::SentenceAlignment(int sntIndex, int sourceSize, int targetSize) 
 	:m_sntIndex(sntIndex)
 	,numberAligned(targetSize, 0)
