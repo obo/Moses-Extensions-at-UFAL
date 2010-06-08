@@ -94,11 +94,12 @@ protected:
 		m_weightWordPenalty, 
 		m_wordDeletionWeight,
 		m_weightUnknownWord;
-									// PhraseTrans, Generation & LanguageModelScore has multiple weights.
-	int																	m_maxDistortion;
-									// do it differently from old pharaoh
-									// -ve	= no limit on distortion
-									// 0		= no disortion (monotone in old pharaoh)
+
+	// PhraseTrans, Generation & LanguageModelScore has multiple weights.
+	int				m_maxDistortion;
+	// do it differently from old pharaoh
+	// -ve	= no limit on distortion
+	// 0		= no disortion (monotone in old pharaoh)
 	bool m_reorderingConstraint; // use additional reordering constraints
 	size_t                              
 			m_maxHypoStackSize //hypothesis-stack size that triggers pruning
@@ -121,8 +122,9 @@ protected:
 	 */
 	bool m_dropUnknown;
 	bool m_wordDeletionEnabled;
-  bool m_disableDiscarding;
-  bool m_printAllDerivations;
+
+	bool m_disableDiscarding;
+	bool m_printAllDerivations;
 
 	bool m_sourceStartPosMattersForRecombination;
 	bool m_recoverPath;
@@ -141,7 +143,6 @@ protected:
 	bool m_reportAllFactorsNBest;
 	bool m_isDetailedTranslationReportingEnabled;
 	bool m_onlyDistinctNBest;
-	bool m_computeLMBackoffStats;
 	bool m_UseAlignmentInfo;
 	bool m_PrintAlignmentInfo;
 	bool m_PrintAlignmentInfoNbest;
@@ -165,6 +166,7 @@ protected:
   float m_lmbrPRatio; //! decaying factor for ngram thetas - see Tromble et al 08 for more details
   float m_lmbrMapWeight; //! Weight given to the map solution. See Kumar et al 09 for details
     
+	size_t m_lmcache_cleanup_threshold; //! number of translations after which LM claenup is performed (0=never, N=after N translations; default is 1)
 
 	bool m_timeout; //! use timeout
 	size_t m_timeout_threshold; //! seconds after which time out is activated
@@ -224,6 +226,7 @@ protected:
 	bool LoadSourceContextFeatures();	
 
 	void ReduceTransOptCache() const;   
+	bool m_continuePartialTranslation;
 	
 public:
 
@@ -260,10 +263,6 @@ public:
 		return m_parameter->GetParam(paramName);
 	}
 
-	bool IsComputeLMBackoffStats() const
-	{
-		return m_computeLMBackoffStats;
-	}
 	const std::vector<FactorType> &GetInputFactorOrder() const
 	{
 		return m_inputFactorOrder;
@@ -528,6 +527,9 @@ public:
   
 	bool UseTimeout() const { return m_timeout; }
 	size_t GetTimeoutThreshold() const { return m_timeout_threshold; }
+
+	size_t GetLMCacheCleanupThreshold() const
+	{ return m_lmcache_cleanup_threshold; }
 	
 	bool GetOutputSearchGraph() const { return m_outputSearchGraph; }
 	bool GetOutputSearchGraphExtended() const { return m_outputSearchGraphExtended; }
@@ -545,7 +547,7 @@ public:
 	const TranslationOptionList* FindTransOptListInCache(const DecodeGraph &decodeGraph, const Phrase &sourcePhrase) const;
   
 	bool PrintAllDerivations() const { return m_printAllDerivations;}
-
+	
 	const UnknownLHSList &GetUnknownLHS() const
 	{ return m_unknownLHS; }
 
@@ -565,6 +567,7 @@ public:
 	{ return 999999; /* TODO wtf! */ }
 	
 
+	bool ContinuePartialTranslation() const { return m_continuePartialTranslation; }
 };
 
 }

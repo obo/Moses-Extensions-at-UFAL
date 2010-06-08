@@ -122,20 +122,22 @@ int main(int argc, char* argv[])
 	size_t lineCount = 0;
 	while(ReadInput(*ioWrapper,staticData.GetInputType(),source))
 	{
-			// note: source is only valid within this while loop!
+		// note: source is only valid within this while loop!
 		IFVERBOSE(1)
 			ResetUserTime();
+		lineCount++;
 
-    VERBOSE(2,"\nTRANSLATING(" << ++lineCount << "): " << *source);
+		VERBOSE(2,"\nTRANSLATING(" << lineCount << "): " << *source);
 
 		Manager manager(*source, staticData.GetSearchAlgorithm());
 		manager.ProcessSentence();
+
 
 		if (staticData.GetOutputWordGraph())
 			manager.GetWordGraph(source->GetTranslationId(), ioWrapper->GetOutputWordGraphStream());
 
                 if (staticData.GetOutputSearchGraph())
-		  manager.GetSearchGraph(source->GetTranslationId(), ioWrapper->GetOutputSearchGraphStream());
+		  manager.OutputSearchGraph(source->GetTranslationId(), ioWrapper->GetOutputSearchGraphStream());
 
 #ifdef HAVE_PROTOBUF
                 if (staticData.GetOutputSearchGraphPB()) {
@@ -227,7 +229,6 @@ int main(int argc, char* argv[])
         IFVERBOSE(2) { PrintUserTime("Sentence Decoding Time:"); }
 
         manager.CalcDecoderStatistics();
-
 	}
 
 	delete ioWrapper;

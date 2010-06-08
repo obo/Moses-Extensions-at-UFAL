@@ -19,9 +19,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
-
-#include "LanguageModelParalellBackoff.h"
+#include "LanguageModelParallelBackoff.h"
 #include "File.h"
 #include "TypeDef.h"
 #include "Util.h"
@@ -37,22 +35,22 @@ using namespace std;
 namespace Moses
 {
 
-	LanguageModelParalellBackoff::LanguageModelParalellBackoff(bool registerScore, ScoreIndexManager &scoreIndexManager)
+	LanguageModelParallelBackoff::LanguageModelParallelBackoff(bool registerScore, ScoreIndexManager &scoreIndexManager)
 	:LanguageModelMultiFactor(registerScore, scoreIndexManager)
 	{
 		 ///
 	}
 	
-	LanguageModelParalellBackoff::~LanguageModelParalellBackoff()
+	LanguageModelParallelBackoff::~LanguageModelParallelBackoff()
 	{
      ///
 	}
 
 
-bool LanguageModelParalellBackoff::Load(const std::string &filePath, const std::vector<FactorType> &factorTypes, float weight, size_t nGramOrder)
+bool LanguageModelParallelBackoff::Load(const std::string &filePath, const std::vector<FactorType> &factorTypes, float weight, size_t nGramOrder)
 	{
 
-    cerr << "Loading Language Model Paralell Backoff!!!\n";
+    cerr << "Loading Language Model Parallel Backoff!!!\n";
     widMatrix = new ::WidMatrix();
 		m_factorTypes	= FactorMask(factorTypes);
     m_srilmVocab = new ::FactoredVocab();
@@ -145,12 +143,12 @@ bool LanguageModelParalellBackoff::Load(const std::string &filePath, const std::
 
 	}
 
-VocabIndex LanguageModelParalellBackoff::GetLmID( const std::string &str ) const
+VocabIndex LanguageModelParallelBackoff::GetLmID( const std::string &str ) const
 {
     return m_srilmVocab->getIndex( str.c_str(), m_unknownId );
 }
 
-VocabIndex LanguageModelParalellBackoff::GetLmID( const Factor *factor, size_t ft ) const
+VocabIndex LanguageModelParallelBackoff::GetLmID( const Factor *factor, size_t ft ) const
 {
 	
 	size_t factorId = factor->GetId();	
@@ -165,7 +163,7 @@ VocabIndex LanguageModelParalellBackoff::GetLmID( const Factor *factor, size_t f
 
 }
 
-void LanguageModelParalellBackoff::CreateFactors()
+void LanguageModelParallelBackoff::CreateFactors()
 { 
 
 	// add factors which have srilm id
@@ -235,7 +233,7 @@ void LanguageModelParalellBackoff::CreateFactors()
 		
 }
 
-	float LanguageModelParalellBackoff::GetValue(const std::vector<const Word*> &contextFactor, State* finalState, unsigned int* len) const
+	float LanguageModelParallelBackoff::GetValue(const std::vector<const Word*> &contextFactor, State* finalState, unsigned int* len) const
 	{
 
     static WidMatrix widMatrix;		

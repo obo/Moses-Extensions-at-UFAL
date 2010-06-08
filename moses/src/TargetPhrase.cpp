@@ -42,17 +42,31 @@ bool TargetPhrase::printalign=StaticData::Instance().PrintAlignmentInfo();
 //bool TargetPhrase::wordalignflag;
 //bool TargetPhrase::printalign;
 
+TargetPhrase::TargetPhrase(FactorDirection direction, std::string out_string)
+	:Phrase(direction),m_transScore(0.0), m_ngramScore(0.0), m_fullScore(0.0), m_sourcePhrase(0)
+{
+
+		//ACAT
+		const StaticData &staticData = StaticData::Instance();
+		CreateFromString(staticData.GetInputFactorOrder(), out_string, staticData.GetFactorDelimiter());
+		wordalignflag=StaticData::Instance().UseAlignmentInfo();
+		printalign=StaticData::Instance().PrintAlignmentInfo();
+}
+
+
 TargetPhrase::TargetPhrase(FactorDirection direction)
 	:Phrase(direction)
 	, m_transScore(0.0)
 	, m_ngramScore(0.0)
 	, m_fullScore(0.0)
 	, m_sourcePhrase(0)
-	, m_debugOutput(NULL)
-
 {
 		wordalignflag=StaticData::Instance().UseAlignmentInfo();
 		printalign=StaticData::Instance().PrintAlignmentInfo();
+}
+	
+TargetPhrase::~TargetPhrase()
+{
 }
 
 void TargetPhrase::SetScore()
@@ -279,8 +293,8 @@ TO_STRING_BODY(TargetPhrase);
 
 std::ostream& operator<<(std::ostream& os, const TargetPhrase& tp)
 {
-  os << static_cast<const Phrase&>(tp);
-	os << ", pC=" << tp.m_transScore << ", c=" << tp.m_fullScore;
+  os << static_cast<const Phrase&>(tp) << ":" << tp.GetAlignmentInfo();
+	os << ": pC=" << tp.m_transScore << ", c=" << tp.m_fullScore;
 	
   return os;
 }

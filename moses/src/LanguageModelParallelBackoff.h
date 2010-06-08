@@ -59,7 +59,7 @@ namespace Moses
 /** LM of multiple factors. A simple extension of single factor LM - factors backoff together.
  *	Rather slow as this uses string concatenation/split
 */
-class LanguageModelParalellBackoff : public LanguageModelMultiFactor
+class LanguageModelParallelBackoff : public LanguageModelMultiFactor
 {
 protected:
 	std::vector<FactorType> m_factorTypesOrdered;
@@ -78,10 +78,10 @@ protected:
   WidMatrix *widMatrix;
 
 public:
-	LanguageModelParalellBackoff(bool registerScore, ScoreIndexManager &scoreIndexManager);
+	LanguageModelParallelBackoff(bool registerScore, ScoreIndexManager &scoreIndexManager);
 
 	
-	~LanguageModelParalellBackoff();
+	~LanguageModelParallelBackoff();
 
 	bool Load(const std::string &filePath, const std::vector<FactorType> &factorTypes, float weight, size_t nGramOrder);
 

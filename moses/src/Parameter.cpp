@@ -41,6 +41,7 @@ Parameter::Parameter()
 {
 	AddParam("beam-threshold", "b", "threshold for threshold pruning");
 	AddParam("config", "f", "location of the configuration file");
+	AddParam("continue-partial-translation", "cpt", "start from nonempty hypothesis");
 	AddParam("drop-unknown", "du", "drop unknown words instead of copying them");
   AddParam("disable-discarding", "dd", "disable hypothesis discarding");
 	AddParam("factor-delimiter", "fd", "specify a different factor delimiter than the default");
@@ -53,7 +54,6 @@ Parameter::Parameter()
 	AddParam("include-alignment-in-n-best", "include word alignment in the n-best list. default is false");
 	AddParam("lmodel-file", "location and properties of the language models");
 	AddParam("lmodel-dub", "dictionary upper bounds of language models");
-	AddParam("lmstats", "L", "(1/0) compute LM backoff statistics for each translation hypothesis");
 	AddParam("mapping", "description of decoding steps");
 	AddParam("max-partial-trans-opt", "maximum number of partial translation options per input span (during mapping steps)");
 	AddParam("max-trans-opt-per-coverage", "maximum number of translation options per input span (after applying mapping steps)");
@@ -102,6 +102,7 @@ Parameter::Parameter()
   AddParam("lmbr-r", "ngram precision decay value for lattice mbr");
   AddParam("lmbr-map-weight", "weight given to map solution when doing lattice MBR (default 0)");
   AddParam("lattice-hypo-set", "to use lattice as hypo set during lattice MBR");
+	AddParam("clean-lm-cache", "clean language model caches after N translations (default N=1)");
 	AddParam("use-persistent-cache", "cache translation options across sentences (default true)");
 	AddParam("persistent-cache-size", "maximum size of cache for translation options (default 10,000 input phrases)");
 	AddParam("recover-input-path", "r", "(conf net/word lattice only) - recover input path corresponding to the best translation");
@@ -441,7 +442,7 @@ void Parameter::OverwriteParam(const string &paramSwitch, const string &paramNam
 
 
 /** read parameters from a configuration file */
-bool Parameter::ReadConfigFile( string filePath ) 
+bool Parameter::ReadConfigFile(const string &filePath ) 
 {
 	InputFileStream inFile(filePath);
 	string line, paramName;

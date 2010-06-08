@@ -38,7 +38,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "GlobalLexicalModel.h"
 #include "SourceContextFeature.h"
 #include "SentenceStats.h"
-#include "PhraseDictionaryTreeAdaptor.h"
+#include "PhraseDictionary.h"
 #include "UserMessage.h"
 #include "TranslationOption.h"
 #include "DecodeGraph.h"
@@ -74,7 +74,6 @@ StaticData::StaticData()
 ,m_wpProducer(0)
 ,m_isDetailedTranslationReportingEnabled(false) 
 ,m_onlyDistinctNBest(false)
-,m_computeLMBackoffStats(false)
 ,m_factorDelimiter("|") // default delimiter between factors
 ,m_isAlwaysCreateDirectTranslationOption(false)
 ,m_sourceStartPosMattersForRecombination(false)
@@ -86,7 +85,7 @@ StaticData::StaticData()
 	// memory pools
 	Phrase::InitializeMemPool();
 }
-
+	
 bool StaticData::LoadData(Parameter *parameter)
 {
 	ResetUserTime();
@@ -129,6 +128,8 @@ bool StaticData::LoadData(Parameter *parameter)
 	if (m_parameter->GetParam("factor-delimiter").size() > 0) {
 		m_factorDelimiter = m_parameter->GetParam("factor-delimiter")[0];
 	}
+
+	SetBooleanParameter( &m_continuePartialTranslation, "continue-partial-translation", false );
 	
 	//word-to-word alignment
 	SetBooleanParameter( &m_UseAlignmentInfo, "use-alignment-info", false );
@@ -273,13 +274,6 @@ bool StaticData::LoadData(Parameter *parameter)
 	SetBooleanParameter( &m_isDetailedTranslationReportingEnabled, 
 			     "translation-details", false );
 
-	SetBooleanParameter( &m_computeLMBackoffStats, "lmstats", false );
-	if (m_computeLMBackoffStats && 
-	    ! m_isDetailedTranslationReportingEnabled) {
-	  VERBOSE(1, "-lmstats implies -translation-details, enabling" << std::endl);
-	  m_isDetailedTranslationReportingEnabled = true;
-	}
-
 	// score weights
 	m_weightWordPenalty				= Scan<float>( m_parameter->GetParam("weight-w")[0] );
 	m_wpProducer = new WordPenaltyProducer(m_scoreIndexManager);
@@ -378,6 +372,10 @@ bool StaticData::LoadData(Parameter *parameter)
 	m_timeout_threshold = (m_parameter->GetParam("time-out").size() > 0) ?
 	  Scan<size_t>(m_parameter->GetParam("time-out")[0]) : -1;
 	m_timeout = (GetTimeoutThreshold() == -1) ? false : true;
+
+
+  m_lmcache_cleanup_threshold = (m_parameter->GetParam("clean-lm-cache").size() > 0) ?
+    Scan<size_t>(m_parameter->GetParam("clean-lm-cache")[0]) : 1;
 
 	// Read in constraint decoding file, if provided
 	if(m_parameter->GetParam("constraint").size()) {
@@ -786,6 +784,17 @@ bool StaticData::LoadPhraseTables()
 		const vector<string> &translationVector = m_parameter->GetParam("ttable-file");
 		vector<size_t>	maxTargetPhrase					= Scan<size_t>(m_parameter->GetParam("ttable-limit"));
 
+		if(maxTargetPhrase.size() == 1 && translationVector.size() > 1) {
+			VERBOSE(1, "Using uniform ttable-limit of " << maxTargetPhrase[0] << " for all translation tables." << endl);
+			for(size_t i = 1; i < translationVector.size(); i++)
+				maxTargetPhrase.push_back(maxTargetPhrase[0]);
+		} else if(maxTargetPhrase.size() != 1 && maxTargetPhrase.size() < translationVector.size()) {
+			stringstream strme;
+			strme << "You specified " << translationVector.size() << " translation tables, but only " << maxTargetPhrase.size() << " ttable-limits.";
+			UserMessage::Add(strme.str());
+			return false;
+		}
+
 		size_t index = 0;
 		size_t weightAllOffset = 0;
 		for(size_t currDict = 0 ; currDict < translationVector.size(); currDict++) 
@@ -1066,8 +1075,6 @@ vector<DecodeGraph*> StaticData::GetDecodeStepVL(const InputType& source) const
 	return decodeGraphs;
 }
 
-#include "PhraseDictionary.h"
-	
 void StaticData::CleanUpAfterSentenceProcessing() const
 {
 	
@@ -1082,12 +1089,12 @@ void StaticData::CleanUpAfterSentenceProcessing() const
 	for(size_t i=0;i<m_generationDictionary.size();++i)
 		m_generationDictionary[i]->CleanUp();
   
-  //something LMs could do after each sentence 
-  LMList::const_iterator iterLM;
+	//something LMs could do after each sentence 
+	LMList::const_iterator iterLM;
 	for (iterLM = m_languageModel.begin() ; iterLM != m_languageModel.end() ; ++iterLM)
 	{
 		LanguageModel &languageModel = **iterLM;
-    languageModel.CleanUpAfterSentenceProcessing();
+		languageModel.CleanUpAfterSentenceProcessing();
 	}
 }
 

@@ -49,6 +49,42 @@ int Sentence::Read(std::istream& in,const std::vector<FactorType>& factorOrder)
 
 	if (getline(in, line, '\n').eof())	
 			return 0;
+
+	//get covered words - if continual-partial-translation is switched on, parse input
+	const StaticData &staticData = StaticData::Instance();
+	m_frontSpanCoveredLength = 0;
+	m_sourceCompleted.resize(0);
+	if (staticData.ContinuePartialTranslation()){
+		string initialTargetPhrase;
+		string sourceCompletedStr;
+		int loc1 = line.find( "|||", 0 );
+		int loc2 = line.find( "|||", loc1 + 3 );
+		if (loc1 > -1 && loc2 > -1){
+			initialTargetPhrase = line.substr(0, loc1);
+			sourceCompletedStr = line.substr(loc1 + 3, loc2 - loc1 - 3);
+			line = line.substr(loc2 + 3);
+			sourceCompletedStr = Trim(sourceCompletedStr);
+			initialTargetPhrase = Trim(initialTargetPhrase);
+			m_initialTargetPhrase = initialTargetPhrase;
+			int len = sourceCompletedStr.size();
+			m_sourceCompleted.resize(len);
+			int contiguous = 1;
+			for (int i = 0; i < len; ++i){
+				if (sourceCompletedStr.at(i) == '1')
+				{
+					m_sourceCompleted[i] = true;
+					if (contiguous)
+						m_frontSpanCoveredLength ++;
+				}
+				else
+				{
+					m_sourceCompleted[i] = false;
+					contiguous = 0;
+				}
+			}
+		}
+	}
+
 	// remove extra spaces
 	line = Trim(line);
 
@@ -57,7 +93,7 @@ int Sentence::Read(std::istream& in,const std::vector<FactorType>& factorOrder)
 	if (meta.find("id") != meta.end()) { this->SetTranslationId(atol(meta["id"].c_str())); }
 	
 	// parse XML markup in translation line
-	const StaticData &staticData = StaticData::Instance();
+	//const StaticData &staticData = StaticData::Instance();
 	std::vector<std::vector<XmlOption*> > xmlOptionsList(0);
 	std::vector< size_t > xmlWalls;
 	if (staticData.GetXmlInputType() != XmlPassThrough) {
