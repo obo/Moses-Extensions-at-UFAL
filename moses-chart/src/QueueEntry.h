@@ -1,4 +1,4 @@
-// $Id: PhraseDictionaryNewFormat.h 3045 2010-04-05 13:07:29Z hieuhoang1972 $
+// $Id$
 // vim:tabstop=2
 /***********************************************************************
  Moses - factored phrase-based language decoder
@@ -59,7 +59,7 @@ protected:
 	const HypoList *m_orderedHypos;
 
 public:
-	ChildEntry(size_t pos, const HypoList &orderedHypos, const Moses::Word &headWord)
+  ChildEntry(size_t pos, const HypoList &orderedHypos, const Moses::Word & /*headWord*/ )
 		:m_pos(pos)
 		,m_orderedHypos(&orderedHypos)
 		//,m_headWord(headWord)

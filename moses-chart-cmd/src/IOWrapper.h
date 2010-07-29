@@ -1,4 +1,4 @@
-// $Id: IOWrapper.h 2615 2009-11-12 13:18:20Z hieuhoang1972 $
+// $Id$
 
 /***********************************************************************
 Moses - factored phrase-based language decoder
@@ -61,6 +61,7 @@ protected:
 	const std::vector<Moses::FactorType>	&m_outputFactorOrder;
 	const Moses::FactorMask								&m_inputFactorUsed;
 	std::ostream 									*m_nBestStream, *m_outputSearchGraphStream;
+  std::ostream                  *m_detailedTranslationReportingStream;
 	std::string										m_inputFilePath;
 	std::istream									*m_inputStream;
 	bool													m_surpressSingleBestOutput;

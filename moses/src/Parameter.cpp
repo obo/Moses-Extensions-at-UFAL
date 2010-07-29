@@ -19,6 +19,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
+#include <ctime>
 #include <iostream>
 #include <iterator>
 #include <fstream>
@@ -68,7 +69,8 @@ Parameter::Parameter()
 	AddParam("report-segmentation", "t", "report phrase segmentation in the output");
 	AddParam("stack", "s", "maximum stack size for histogram pruning");
 	AddParam("stack-diversity", "sd", "minimum number of hypothesis of each coverage in stack (default 0)");
-	AddParam("translation-details", "T", "for each best translation hypothesis, print out details about what sourcce spans were used, dropped");
+    AddParam("threads","th", "number of threads to use in decoding (defaults to single-threaded)");
+	AddParam("translation-details", "T", "for each best hypothesis, report translation details to the given file");
 	AddParam("ttable-file", "location and properties of the translation tables");
 	AddParam("ttable-limit", "ttl", "maximum number of translation table entries per input phrase");
 	AddParam("translation-option-threshold", "tot", "threshold for translation options relative to best for input phrase");
@@ -195,7 +197,8 @@ bool Parameter::LoadParam(int argc, char* argv[])
 		&& (configPath = FindParam("-config", argc, argv)) == "")
 	{
 		PrintCredit();
-
+		Explain();
+		
 		UserMessage::Add("No configuration file was specified.  Use -config or -f");
 		return false;
 	}
@@ -300,21 +303,7 @@ bool Parameter::Validate()
 	}
 
   // do files exist?
-	// phrase tables
-	if (noErrorFlag) 
-	{
-		std::vector<std::string> ext;
-		// standard phrase table extension (i.e. full name has to be specified)
-		// raw tables in either un compressed or compressed form
-		ext.push_back("");
-	  ext.push_back(".gz");
-		// alternative file extension for binary phrase table format:
-		ext.push_back(".binphr.idx");
-		noErrorFlag = FilesExist("ttable-file", 4,ext);
-	}
-	// language model
-//	if (noErrorFlag)
-//		noErrorFlag = FilesExist("lmodel-file", 3);
+
 	// input file
 	if (noErrorFlag && m_setting["input-file"].size() == 1)
 	{
@@ -344,7 +333,7 @@ bool Parameter::Validate()
 }
 
 /** check whether a file exists */
-bool Parameter::FilesExist(const string &paramName, size_t tokenizeIndex,std::vector<std::string> const& extensions)
+bool Parameter::FilesExist(const string &paramName, int fieldNo, std::vector<std::string> const& extensions)
 {
 	typedef std::vector<std::string> StringVec;
 	StringVec::const_iterator iter;
@@ -358,10 +347,17 @@ bool Parameter::FilesExist(const string &paramName, size_t tokenizeIndex,std::ve
 	for (iter = pathVec.begin() ; iter != pathVec.end() ; ++iter)
 	{
 		StringVec vec = Tokenize(*iter);
+
+		size_t tokenizeIndex;
+		if (fieldNo == -1)
+			tokenizeIndex = vec.size() - 1;
+		else
+			tokenizeIndex = static_cast<size_t>(fieldNo);
+
 		if (tokenizeIndex >= vec.size())
 		{
 			stringstream errorMsg("");
-			errorMsg << "Expected at least " << (tokenizeIndex+1) << " tokens per emtry in '"
+			errorMsg << "Expected at least " << (tokenizeIndex+1) << " tokens per entry in '"
 							<< paramName << "', but only found "
 							<< vec.size();
 			UserMessage::Add(errorMsg.str());
@@ -477,6 +473,7 @@ bool Parameter::ReadConfigFile(const string &filePath )
 struct Credit
 {
 	string name, contact, currentPursuits, areaResponsibility;
+	int sortId;
 
 	Credit(string name, string contact, string currentPursuits, string areaResponsibility)
 	{
@@ -484,16 +481,20 @@ struct Credit
 		this->contact							= contact						;
 		this->currentPursuits			= currentPursuits		;
 		this->areaResponsibility	= areaResponsibility;
+		this->sortId							= rand() % 1000;
 	}
 
 	bool operator<(const Credit &other) const
 	{
+		/*
 		if (areaResponsibility.size() != 0 && other.areaResponsibility.size() ==0)
 			return true;
 		if (areaResponsibility.size() == 0 && other.areaResponsibility.size() !=0)
 			return false;
 
 		return name < other.name;
+		*/
+		return sortId < other.sortId;
 	}
 
 };
@@ -502,19 +503,19 @@ std::ostream& operator<<(std::ostream &os, const Credit &credit)
 {
 	os << credit.name;
 	if (credit.contact != "")
-		os << "\n   contact: " << credit.contact;
+		os << "\t   contact: " << credit.contact;
 	if (credit.currentPursuits != "")
-		os << "\n   " << credit.currentPursuits;
+		os << "   " << credit.currentPursuits;
 	if (credit.areaResponsibility != "")
-		os << "\n   I'll answer question on: " << credit.areaResponsibility;
-	os << endl;
+		os << "   I'll answer question on: " << credit.areaResponsibility;
 	return os;
 }
 
 void Parameter::PrintCredit()
 {
 	vector<Credit> everyone;
-
+	srand ( time(NULL) );
+	
 	everyone.push_back(Credit("Nicola Bertoldi"
 													, "911"
 													, ""
@@ -565,7 +566,7 @@ void Parameter::PrintCredit()
 													, "ambiguous source input, confusion networks, confusing source code"));
 	everyone.push_back(Credit("Hieu Hoang", "http://www.hoang.co.uk/hieu/"
 													, "phd student at Edinburgh Uni. Original Moses developer"
-													, "general queries/ flames on Moses. Doing stuff on async factored translation, so anything on that as well"));
+													, "general queries/ flames on Moses."));
 	
 	sort(everyone.begin(), everyone.end());
 
@@ -587,8 +588,8 @@ void Parameter::PrintCredit()
 			<< "License along with this library; if not, write to the Free Software" << endl
 			<< "Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA" << endl << endl
 			<< "***********************************************************************" << endl << endl
-			<< "Built on " << __DATE__ << endl << endl
-			<< "CREDITS" << endl << endl;
+			<< "Built on " << __DATE__ << " at " __TIME__ << endl << endl
+			<< "WHO'S FAULT IS THIS GODDAM SOFTWARE:" << endl;
 
 	ostream_iterator<Credit> out(cerr, "\n");
 	copy(everyone.begin(), everyone.end(), out);

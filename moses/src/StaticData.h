@@ -138,7 +138,7 @@ protected:
 	bool m_reportSegmentation;
 	bool m_reportAllFactors;
 	bool m_reportAllFactorsNBest;
-	bool m_isDetailedTranslationReportingEnabled;
+  std::string m_detailedTranslationReportingFilePath;
 	bool m_onlyDistinctNBest;
 	bool m_UseAlignmentInfo;
 	bool m_PrintAlignmentInfo;
@@ -423,7 +423,11 @@ public:
 	}
 	bool IsDetailedTranslationReportingEnabled() const
 	{
-		return m_isDetailedTranslationReportingEnabled;
+		return !m_detailedTranslationReportingFilePath.empty();
+	}
+	const std::string &GetDetailedTranslationReportingFilePath() const
+	{
+		return m_detailedTranslationReportingFilePath;
 	}
 	
 	bool IsLabeledNBestList() const
@@ -527,6 +531,7 @@ public:
 	{ return m_lmcache_cleanup_threshold; }
 	
 	bool GetOutputSearchGraph() const { return m_outputSearchGraph; }
+    void SetOutputSearchGraph(bool outputSearchGraph) {m_outputSearchGraph = outputSearchGraph;}
 	bool GetOutputSearchGraphExtended() const { return m_outputSearchGraphExtended; }
 #ifdef HAVE_PROTOBUF
 	bool GetOutputSearchGraphPB() const { return m_outputSearchGraphPB; }

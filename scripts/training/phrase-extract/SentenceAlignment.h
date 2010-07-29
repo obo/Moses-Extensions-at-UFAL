@@ -32,9 +32,9 @@ class SentenceAlignment
         std::vector<int> alignedCountS;
         std::vector<std::vector<int> > alignedToT;
 
-        virtual void processTargetSentence(const char *);
+        virtual bool processTargetSentence(const char *, int);
 
-        virtual void processSourceSentence(const char *);
+        virtual bool processSourceSentence(const char *, int);
 
         bool create(char targetString[], char sourceString[],
                     char alignmentString[], int sentenceID);

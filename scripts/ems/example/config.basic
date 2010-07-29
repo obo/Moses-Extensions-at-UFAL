@@ -32,14 +32,17 @@ wmt10-data = $working-dir/data
 # moses decoder
 decoder = $moses-src-dir/moses-cmd/src/moses
 
-# conversion of phrase table into binary format
+# conversion of phrase table into binary on-disk format
 ttable-binarizer = $moses-src-dir/misc/processPhraseTable
 
-# tokenizers
+# conversion of rule table into binary on-disk format
+#ttable-binarizer = "$moses-src-dir/CreateOnDisk/src/CreateOnDiskPt 1 1 5 100 2"
+
+# tokenizers - comment out if all your data is already tokenized
 input-tokenizer = "$moses-script-dir/tokenizer/tokenizer.perl -a -l $input-extension"
 output-tokenizer = "$moses-script-dir/tokenizer/tokenizer.perl -a -l $output-extension"
 
-# truecasers
+# truecasers - comment out if you do not use the truecaser
 input-truecaser = $moses-script-dir/recaser/truecase.perl
 output-truecaser = $moses-script-dir/recaser/truecase.perl
 detruecaser = $moses-script-dir/recaser/detruecase.perl
@@ -284,6 +287,12 @@ lexicalized-reordering = msd-bidirectional-fe
 #
 #extract-settings = ""
 
+### unknown word labels (target syntax only)
+# enables use of unknown word labels during decoding
+# label file is generated during rule extraction
+#
+#use-unknown-word-labels = true
+
 ### if phrase extraction should be skipped,
 # point to stem for extract files
 #
@@ -402,10 +411,16 @@ trainer = $moses-script-dir/recaser/train-truecaser.perl
 
 ### number of jobs (if parallel execution on cluster)
 #
-jobs = 10
+#jobs = 10
 
+### additional decoder settings
+# switches for the Moses decoder
+#
 decoder-settings = "-search-algorithm 1 -cube-pruning-pop-limit 5000 -s 5000"
 
+### multiple reference translations
+#
+multiref = yes
 
 ### prepare system output for scoring 
 # this may include detokenization and wrapping output in sgm 
@@ -436,6 +451,12 @@ nist-bleu-c = "$moses-script-dir/generic/mteval-v12.pl -c"
 ### Analysis: carry out various forms of analysis on the output
 #
 analysis = $moses-script-dir/ems/support/analysis.perl
+#
+# also report on input coverage
+analyze-coverage = yes
+#
+# also report on phrase mappings used
+report-segmentation = yes
 
 [EVALUATION:newstest2009]
 

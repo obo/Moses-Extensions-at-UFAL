@@ -399,7 +399,7 @@ void TranslationOptionCollection::CreateTranslationOptions(const vector <DecodeG
 		}
 	}
 
-	VERBOSE(3,"Translation Option Collection\n " << *this << endl);
+	VERBOSE(2,"Translation Option Collection\n " << *this << endl);
 
 	ProcessUnknownWord(decodeStepVL);
 	
@@ -584,7 +584,7 @@ void TranslationOptionCollection::Add(TranslationOption *translationOption)
 
 TO_STRING_BODY(TranslationOptionCollection);
 
-inline std::ostream& operator<<(std::ostream& out, const TranslationOptionCollection& coll)
+std::ostream& operator<<(std::ostream& out, const TranslationOptionCollection& coll)
 {
 	size_t size = coll.GetSize();
 	for (size_t startPos = 0 ; startPos < size ; ++startPos)
@@ -595,7 +595,7 @@ inline std::ostream& operator<<(std::ostream& out, const TranslationOptionCollec
 
 		for (size_t endPos = startPos ; endPos < startPos + maxSize ; ++endPos)
 		{
-			TranslationOptionList fullList = coll.GetTranslationOptionList(startPos, endPos);
+			const TranslationOptionList& fullList = coll.GetTranslationOptionList(startPos, endPos);
 			size_t sizeFull = fullList.size();
 		  for (size_t i = 0; i < sizeFull; i++)
 			{
@@ -651,6 +651,25 @@ void TranslationOptionCollection::CacheLexReordering()
 		}
 	}
 }
+//! list of trans opt for a particular span
+	TranslationOptionList &TranslationOptionCollection::GetTranslationOptionList(size_t startPos, size_t endPos)
+	{
+		size_t maxSize = endPos - startPos;
+    size_t maxSizePhrase = StaticData::Instance().GetMaxPhraseLength();
+    maxSize = std::min(maxSize, maxSizePhrase);
+
+		assert(maxSize < m_collection[startPos].size());
+		return m_collection[startPos][maxSize];
+	}
+	const TranslationOptionList &TranslationOptionCollection::GetTranslationOptionList(size_t startPos, size_t endPos) const
+	{
+		size_t maxSize = endPos - startPos;
+    size_t maxSizePhrase = StaticData::Instance().GetMaxPhraseLength();
+    maxSize = std::min(maxSize, maxSizePhrase);
+
+		assert(maxSize < m_collection[startPos].size());
+	 	return m_collection[startPos][maxSize];
+	}
 
 }
 

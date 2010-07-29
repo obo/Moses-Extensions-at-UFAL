@@ -1,4 +1,4 @@
-// $Id: PhraseDictionaryNewFormat.h 3045 2010-04-05 13:07:29Z hieuhoang1972 $
+// $Id$
 // vim:tabstop=2
 /***********************************************************************
  Moses - factored phrase-based language decoder
@@ -223,7 +223,7 @@ namespace Moses
 						if (iterCache == m_cache.end())
 						{ // not in case							
 							overThreshold = node->GetCount(0) > staticData.GetRuleCountThreshold();
-							cerr << node->GetCount(0) << " ";
+							//cerr << node->GetCount(0) << " ";
 							
 							const OnDiskPt::TargetPhraseCollection *tpcollBerkeleyDb = node->GetTargetPhraseCollection(GetTableLimit(), m_dbWrapper);
 							
@@ -261,7 +261,7 @@ namespace Moses
 		
 		ret->CreateChartRules(rulesLimit);
 
-		cerr << numDerivations << " ";
+		//cerr << numDerivations << " ";
 		
 		return ret;
 	}

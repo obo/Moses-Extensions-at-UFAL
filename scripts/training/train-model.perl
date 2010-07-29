@@ -29,16 +29,14 @@ my($_ROOT_DIR, $_CORPUS_DIR, $_GIZA_E2F, $_GIZA_F2E, $_MODEL_DIR, $_TEMP_DIR, $_
    $_DECODING_STEPS, $_PARALLEL, $_FACTOR_DELIMITER, @_PHRASE_TABLE,
    @_REORDERING_TABLE, @_GENERATION_TABLE, @_GENERATION_TYPE, $_DONT_ZIP,  $_MGIZA, $_MGIZA_CPUS,  $_HMM_ALIGN, $_CONFIG,
    $_HIERARCHICAL,$_XML,$_SOURCE_SYNTAX,$_TARGET_SYNTAX,$_GLUE_GRAMMAR,$_GLUE_GRAMMAR_FILE,$_UNKNOWN_WORD_LABEL_FILE,$_EXTRACT_OPTIONS,$_SCORE_OPTIONS,
-   $_PHRASE_WORD_ALIGNMENT,
+   $_PHRASE_WORD_ALIGNMENT,$_FORCE_FACTORED_FILENAMES,
    $_MEMSCORE, $_FINAL_ALIGNMENT_MODEL,
    $_CONTINUE,$_MAX_LEXICAL_REORDERING,$_DO_STEPS);
 
 my $debug = 0; # debug this script, do not delete any files in debug mode
 
 # the following line is set installation time by 'make release'.  BEWARE!
-my $BINDIR="";
-
-my $force_factored_filenames = 0;
+my $BINDIR="/home/pkoehn/statmt/bin";
 
 $_HELP = 1
     unless &GetOptions('root-dir=s' => \$_ROOT_DIR,
@@ -62,6 +60,7 @@ $_HELP = 1
 		       'first-step=i' => \$_FIRST_STEP,
 		       'last-step=i' => \$_LAST_STEP,
 		       'giza-option=s' => \$_GIZA_OPTION,
+		       'giza-extension=s' => \$_GIZA_EXTENSION,
 		       'parallel' => \$_PARALLEL,
 		       'lm=s' => \@_LM,
 		       'help' => \$_HELP,
@@ -83,7 +82,7 @@ $_HELP = 1
 		       'generation-factors=s' => \$_GENERATION_FACTORS,
 		       'decoding-steps=s' => \$_DECODING_STEPS,
 		       'scripts-root-dir=s' => \$SCRIPTS_ROOTDIR,
-                       'factor-delimiter=s' => \$_FACTOR_DELIMITER,
+		       'factor-delimiter=s' => \$_FACTOR_DELIMITER,
 		       'phrase-translation-table=s' => \@_PHRASE_TABLE,
 		       'generation-table=s' => \@_GENERATION_TABLE,
 		       'reordering-table=s' => \@_REORDERING_TABLE,
@@ -98,12 +97,12 @@ $_HELP = 1
 		       'source-syntax' => \$_SOURCE_SYNTAX,
 		       'target-syntax' => \$_TARGET_SYNTAX,
 		       'xml' => \$_XML,
-		       'phrase-word-alignment=s' => \$_PHRASE_WORD_ALIGNMENT,
+		       'phrase-word-alignment' => \$_PHRASE_WORD_ALIGNMENT,
 		       'config=s' => \$_CONFIG,
 		       'max-lexical-reordering' => \$_MAX_LEXICAL_REORDERING,
 		       'do-steps=s' => \$_DO_STEPS,
 		       'memscore:s' => \$_MEMSCORE,
-               'force-factored-filenames' => \$force_factored_filenames,
+		       'force-factored-filenames' => \$_FORCE_FACTORED_FILENAMES,
                );
 
 if ($_HELP) {
@@ -179,7 +178,7 @@ else {
     if (!defined($_MGIZA_CPUS)) {
         $_MGIZA_CPUS=4;
     }
-    die("ERROR: Cannot find merge_alignment.py") unless (-x $MGIZA_MERGE_ALIGN);
+    die("ERROR: Cannot find $MGIZA_MERGE_ALIGN") unless (-x $MGIZA_MERGE_ALIGN);
 }
 
 my $SNT2COOC = "$BINDIR/snt2cooc.out"; 
@@ -270,8 +269,6 @@ my $___EXTRACT_FILE = $___MODEL_DIR."/extract";
 $___EXTRACT_FILE = $_EXTRACT_FILE if $_EXTRACT_FILE;
 my $___GLUE_GRAMMAR_FILE = $___MODEL_DIR."/glue-grammar";
 $___GLUE_GRAMMAR_FILE = $_GLUE_GRAMMAR_FILE if $_GLUE_GRAMMAR_FILE;
-my $___UNKNOWN_WORD_LABEL_FILE = $___MODEL_DIR."/unknown-word-label";
-$___UNKNOWN_WORD_LABEL_FILE = $_UNKNOWN_WORD_LABEL_FILE if $_UNKNOWN_WORD_LABEL_FILE;
 
 my $___CONFIG = $___MODEL_DIR."/moses.ini";
 $___CONFIG = $_CONFIG if $_CONFIG;
@@ -438,7 +435,7 @@ for my $mtype ( keys %REORDERING_MODEL_TYPES) {
 }
 
 ### Factored translation models
-my $___NOT_FACTORED = !$force_factored_filenames;
+my $___NOT_FACTORED = !$_FORCE_FACTORED_FILENAMES;
 my $___ALIGNMENT_FACTORS = "0-0";
 $___ALIGNMENT_FACTORS = $_ALIGNMENT_FACTORS if defined($_ALIGNMENT_FACTORS);
 die("ERROR: format for alignment factors is \"0-0\" or \"0,1,2-0,1\", you provided $___ALIGNMENT_FACTORS\n") if $___ALIGNMENT_FACTORS !~ /^\d+(\,\d+)*\-\d+(\,\d+)*$/;
@@ -1193,7 +1190,7 @@ sub extract_phrase {
     {
         $cmd = "$RULE_EXTRACT $alignment_file_e $alignment_file_f $alignment_file_a $extract_file";
         $cmd .= " --GlueGrammar $___GLUE_GRAMMAR_FILE" if $_GLUE_GRAMMAR;
-        $cmd .= " --UnknownWordLabel $___UNKNOWN_WORD_LABEL_FILE" if $_TARGET_SYNTAX;
+        $cmd .= " --UnknownWordLabel $_UNKNOWN_WORD_LABEL_FILE" if $_TARGET_SYNTAX && defined($_UNKNOWN_WORD_LABEL_FILE);
         $cmd .= " --SourceSyntax" if $_SOURCE_SYNTAX;
         $cmd .= " --TargetSyntax" if $_TARGET_SYNTAX;
         $cmd .= " ".$_EXTRACT_OPTIONS if defined($_EXTRACT_OPTIONS);
@@ -1280,7 +1277,7 @@ sub score_phrase_phrase_extract {
 
         my $cmd = "$PHRASE_SCORE $extract $lexical_file.$direction $ttable_file.half.$direction $inverse";
         $cmd .= " --Hierarchical" if $_HIERARCHICAL;
-        $cmd .= " --WordAlignment $_PHRASE_WORD_ALIGNMENT" if $_PHRASE_WORD_ALIGNMENT;
+        $cmd .= " --WordAlignment" if $_PHRASE_WORD_ALIGNMENT;
         $cmd .= " $_SCORE_OPTIONS" if defined($_SCORE_OPTIONS);
         print $cmd."\n";
         safesystem($cmd) or die "ERROR: Scoring of phrases failed";	    
@@ -1604,8 +1601,8 @@ sub create_ini {
 	foreach my $model (@REORDERING_MODELS) {
 	    $weight_d_count += $model->{"numfeatures"};
 	    my $table_file = "$___MODEL_DIR/reordering-table";
-	    $table_file = shift @SPECIFIED_TABLE if scalar(@SPECIFIED_TABLE);
 	    $table_file .= ".$factor" unless $___NOT_FACTORED;
+	    $table_file = shift @SPECIFIED_TABLE if scalar(@SPECIFIED_TABLE);
 	    $table_file .= ".";
 	    $table_file .= $model->{"filename"};
 	    $table_file .= ".gz";
@@ -1652,6 +1649,7 @@ sub create_ini {
   print INI "\n# word penalty\n[weight-w]\n-1\n\n";
 
   if ($_HIERARCHICAL) {
+    print INI "[unknown-lhs]\n$_UNKNOWN_WORD_LABEL_FILE\n\n" if $_TARGET_SYNTAX && defined($_UNKNOWN_WORD_LABEL_FILE);
     print INI "[cube-pruning-pop-limit]\n1000\n\n";
     print INI "[glue-rule-type]\n0\n\n";
     print INI "[non-terminals]\nX\n\n";
