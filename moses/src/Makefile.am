@@ -10,6 +10,7 @@ libmoses_la_HEADERS = \
 	FilePtr.h \
 	ObjectPool.h \
 	BitmapContainer.h \
+	BilingualDynSuffixArray.h \
 	ConfusionNet.h \
 	DecodeGraph.h \
 	DecodeStep.h \
@@ -70,6 +71,8 @@ libmoses_la_HEADERS = \
 	SearchNormal.h \
 	Sentence.h \
 	SentenceStats.h \
+	SourceContextBilingualDynSuffixArray.h \
+	SourceContextFeatures.h \
 	SquareMatrix.h \
 	StaticData.h \
 	TargetPhrase.h \
@@ -112,6 +115,7 @@ endif
 
 libmoses_la_SOURCES = \
 	AlignmentInfo.cpp \
+	BilingualDynSuffixArray.cpp \
 	BitmapContainer.cpp \
 	TreeInput.cpp \
 	ChartRule.cpp \
@@ -125,8 +129,10 @@ libmoses_la_SOURCES = \
 	DotChart.cpp \
 	DotChartOnDisk.cpp \
 	DummyScoreProducers.cpp \
-	DynSAInclude/file.cpp \	DynSAInclude/vocab.cpp \
-	DynSuffixArray.cpp \	BilingualDynSuffixArray.cpp \	Factor.cpp \
+	DynSAInclude/file.cpp \
+	DynSAInclude/vocab.cpp \
+	DynSuffixArray.cpp \
+	Factor.cpp \
 	FactorCollection.cpp \
 	FactorTypeSet.cpp \
 	FeatureFunction.cpp \
@@ -184,6 +190,8 @@ libmoses_la_SOURCES = \
 	SearchNormal.cpp \
 	Sentence.cpp \
 	SentenceStats.cpp \
+	SourceContextBilingualDynSuffixArray.cpp \
+	SourceContextFeatures.cpp \
 	SquareMatrix.cpp \
 	StaticData.cpp \
 	TargetPhrase.cpp \

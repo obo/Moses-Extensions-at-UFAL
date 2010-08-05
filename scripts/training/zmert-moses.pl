@@ -53,14 +53,14 @@ my $additional_triples = {
 
 # moses.ini file uses FULL names for lambdas, while this training script internally (and on the command line)
 # uses ABBR names.
-my $ABBR_FULL_MAP = "d=weight-d lm=weight-l tm=weight-t w=weight-w g=weight-generation lex=weight-lex";
+my $ABBR_FULL_MAP = "d=weight-d lm=weight-l tm=weight-t w=weight-w g=weight-generation lex=weight-lex sc=weight-sc";
 my %ABBR2FULL = map {split/=/,$_,2} split /\s+/, $ABBR_FULL_MAP;
 my %FULL2ABBR = map {my ($a, $b) = split/=/,$_,2; ($b, $a);} split /\s+/, $ABBR_FULL_MAP;
 
 # We parse moses.ini to figure out how many weights do we need to optimize.
 # For this, we must know the correspondence between options defining files
 # for models and options assigning weights to these models.
-my $TABLECONFIG_ABBR_MAP = "ttable-file=tm lmodel-file=lm distortion-file=d generation-file=g global-lexical-file=lex";
+my $TABLECONFIG_ABBR_MAP = "ttable-file=tm lmodel-file=lm distortion-file=d generation-file=g global-lexical-file=lex source-context-file=sc";
 my %TABLECONFIG2ABBR = map {split(/=/,$_,2)} split /\s+/, $TABLECONFIG_ABBR_MAP;
 
 # There are weights that do not correspond to any input file, they just increase the total number of lambdas we optimize
@@ -109,7 +109,7 @@ my $___NORM = "none";
 # set 0 if input type is text, set 1 if input type is confusion network
 my $___INPUTTYPE = 0; 
 
-my $mertdir = "$SCRIPTS_ROOTDIR/../zmert/";  # path to zmert directory
+my $mertdir = "$SCRIPTS_ROOTDIR/../zmert";  # path to zmert directory
 my $filtercmd = undef; # path to filter-model-given-input.pl
 my $clonecmd = "$SCRIPTS_ROOTDIR/training/clone_moses_model.pl"; # executable clone_moses_model.pl
 my $qsubwrapper = undef;
@@ -210,7 +210,6 @@ Options:
   --mertdir=STRING ... directory with zmert.jar
   --filtercmd=STRING  ... path to filter-model-given-input.pl
   --rootdir=STRING  ... where do helpers reside (if not given explicitly)
-  --mertdir=STRING ... path to zmert implementation
   --scorenbestcmd=STRING  ... path to score-nbest.py
   --old-sge ... passed to moses-parallel, assume Sun Grid Engine < 6.0
   --inputtype=[0|1|2] ... Handle different input types (0 for text, 1 for confusion network, 2 for lattices, default is 0)
@@ -996,6 +995,7 @@ sub scan_config {
     "lmodel-file" => 3,
     "distortion-file" => 3,
     "global-lexical-file" => 1,
+    "source-context-file" => 5,
   );
   # by default, each line of each section means one lambda, but some sections
   # explicitly state a custom number of lambdas
@@ -1003,6 +1003,7 @@ sub scan_config {
     "ttable-file" => 3,
     "generation-file" => 2,
     "distortion-file" => 2,
+    "source-context-file" => 2,
   );
   
   open INI, $ini or die "Can't read $ini";
@@ -1037,7 +1038,7 @@ sub scan_config {
 	  $error = 1;
 	  print STDERR "$inishortname:$nr:Filename not absolute: $fn\n";
 	}
-	if (! -s $fn && ! -s "$fn.gz" && ! -s "$fn.binphr.idx" && ! -s "$fn.binlexr.idx" ) {
+	if (! -s $fn && ! -s "$fn.gz" && ! -s "$fn.binphr.idx" && ! -s "$fn.binlexr.idx" && ! -s "$fn.src" ) {
 	  $error = 1;
 	  print STDERR "$inishortname:$nr:File does not exist or empty: $fn\n";
 	}
@@ -1048,6 +1049,12 @@ sub scan_config {
         # how many lambdas does this model need?
         # either specified explicitly, or the default, i.e. one
         my $needlambdas = defined $where_is_lambda_count{$section} ? $flds[$where_is_lambda_count{$section}] : 1;
+	# create default triples for source-context features
+	if( $shortname eq "sc") {
+		for(my $i = 0; $i < $needlambdas; ++$i) {
+			push @{$additional_triples->{$shortname}}, [ 0.1, -1.0, 1.0 ];
+		}
+	}
 
         print STDERR "Config needs $needlambdas lambdas for $section (i.e. $shortname)\n" if $verbose;
         if (!defined $___LAMBDA && (!defined $additional_triples->{$shortname} || scalar(@{$additional_triples->{$shortname}}) < $needlambdas)) {

@@ -36,7 +36,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "LanguageModelFactory.h"
 #include "LexicalReordering.h"
 #include "GlobalLexicalModel.h"
-#include "SourceContextFeature.h"
+#include "SourceContextFeatures.h"
 #include "SentenceStats.h"
 #include "PhraseDictionary.h"
 #include "UserMessage.h"
@@ -595,39 +595,114 @@ bool StaticData::LoadGlobalLexicalModel()
 
 bool StaticData::LoadSourceContextFeatures()
 {
-	const vector<float> &weight = Scan<float>(m_parameter->GetParam("weight-scf"));
-	const vector<string> &file = m_parameter->GetParam("source-context-file");
+	const std::vector<std::string> &file = m_parameter->GetParam("source-context-file");
+	const std::vector<std::string> &weights = m_parameter->GetParam("weight-sc");
 
-	// check we have the same number of weights and files  
-	if (weight.size() != file.size())
+	size_t weightsPos = 0;
+		
+	// 'file' contains the source-context feature specification
+	for (size_t i = 0; i < file.size(); i++ )
 	{
-		stringstream strme;
-		strme << "number of weights (" << weight.size() << ") and models (" << file.size()
-			<< ") for source-context features do not match";
-		UserMessage::Add(strme.str());
-		return false;
-	}
+		std::vector<FactorType> inputFactors;
+		std::vector<FactorType> outputFactors;
+		std::vector<FactorType> inputFactorsSA;
+		std::vector<FactorType> outputFactorsSA;
 
-	// 'file' contains the factor specification and the type of the feature  
-	for (size_t i = 0; i < weight.size(); i++ )
-	{
-		vector<string> spec = Tokenize<string>(file[i], " ");
-		if ( spec.size() != 3 )
+		std::vector<std::string> spec = Tokenize(file[i], " ");
+		// source factors - target factors, SA source factors - SA target factors,
+		// num of features, feature types, aggregate weights OR none,
+		// suffix array (SA) file name (source|target|alignment have .src|.trg|.ali suffix)
+		if ( spec.size() != 6 )
 		{
 			UserMessage::Add("wrong source-context features specification: " + file[i]);
+			UserMessage::Add("6 fields expected for source-context features");
 			return false;
 		}
-		vector< string > factors = Tokenize(spec[1],"-");
+		std::vector< std::string > factors = Tokenize(spec[0],"-");
 		if ( factors.size() != 2 )
 		{
 			UserMessage::Add("wrong factor definition for source-context features: " + spec[0]);
 			return false;
+		} else {
+			inputFactors = Tokenize<FactorType>(factors[0],",");
+			outputFactors = Tokenize<FactorType>(factors[1],",");
+		}	
+		factors = Tokenize(spec[1],"-");
+		if ( factors.size() != 2 )
+		{
+			UserMessage::Add("wrong suffix array factor definition for source-context features: " + spec[1]);
+			return false;
+		} else {
+			inputFactorsSA = Tokenize<FactorType>(factors[0],",");
+			outputFactorsSA = Tokenize<FactorType>(factors[1],",");
 		}
-		vector<FactorType> inputFactors = Tokenize<FactorType>(factors[0],",");
-		vector<FactorType> outputFactors = Tokenize<FactorType>(factors[1],",");
-		// create feature of type spec[0] with path to data in spec[2]
+		size_t numOfWeights = Scan<size_t>(spec[2]);
+		// parse feature types - separated by '|'
+		std::vector<std::string> types = Tokenize( spec[3], "|");
+		size_t numOfScxFeatures = 0;
+		for( size_t pos = 0; pos < types.size(); ++pos) {
+			std::vector<std::string> typeSpec = Tokenize( types[pos], ":");
+			// check feature names
+			if( typeSpec[0] != "e" && typeSpec[0] != "exact" 
+				&& typeSpec[0] != "l" && typeSpec[0] != "loose" 
+				&& typeSpec[0] != "d" && typeSpec[0] != "dependency") {
+				UserMessage::Add("unknown source-context feature type: " + typeSpec[0]);
+				return false;
+			}
+			// collect number of source-context features for suffix-arrays (not for log-linear model) 			
+			if( typeSpec[2] == "all") {
+				numOfScxFeatures += 5; // elemementary feature sets contain 5 features
+			} else {
+				++numOfScxFeatures;
+			}
+			// check that factor index is within range
+			size_t factorIndex = Scan<size_t>(typeSpec[1]);
+			if( factorIndex >= inputFactors.size()) {
+				UserMessage::Add("wrong source-context feature factor: " + typeSpec[1] + " (" + types[pos] + ")");
+				return false;
+			}
+		}
+		std::vector<float> featureWeights;
+		std::vector<float> aggregateWeights;
+		if( spec[4] != "none" && spec[4] != "no") {
+			// parse weights if we aggregate all features into one
+			aggregateWeights = Tokenize<float>( spec[4], "|");
+			// aggregate weights must match with number of scx features (or we defined an aggregate feature)
+			if(  numOfScxFeatures != aggregateWeights.size()) {
+				stringstream s;
+				s << "number of features (" << numOfScxFeatures << ") and aggregate weights ("<< spec[4] << ") do not agree";
+				UserMessage::Add(s.str());
+				return false;
+
+			}
+		} else {
+			// number of weights and specified features must match 
+			assert( numOfWeights == numOfScxFeatures);
+		}
+		// collect feature weights
+		for( size_t pos = 0; pos < numOfWeights; ++pos) {
+			if( weightsPos + pos >= weights.size()) {
+				stringstream s;
+				s << "not enough source-context feature weights: " << weights.size();
+				UserMessage::Add(s.str());
+				return false;
+			}
+			float w = Scan<float>(weights[weightsPos+pos]);
+			featureWeights.push_back(w);
+		}
+		weightsPos += numOfWeights;	
+		// create features
 		m_sourceContextFeatures.push_back( 
-			new SourceContextFeature( spec[0], spec[2], weight[i], inputFactors, outputFactors ) );
+			new SourceContextFeatures( types, spec[5], featureWeights, aggregateWeights, 
+				inputFactors, outputFactors,
+				inputFactorsSA, outputFactorsSA) );
+	}
+	if( weightsPos != weights.size()) {
+		stringstream s;
+		s << "too many source-context feature weights: " << weights.size() << std::endl;
+		s << "required " << weightsPos << " weight(s)";
+		UserMessage::Add(s.str());
+		return false;
 	}
 	IFVERBOSE(1)
 		PrintUserTime("Finished loading SourceContextFeatures");
@@ -1109,6 +1184,11 @@ void StaticData::InitializeBeforeSentenceProcessing(InputType const& in) const
 	for(size_t i=0;i<m_globalLexicalModels.size();++i) {
 		m_globalLexicalModels[i]->InitializeForInput((Sentence const&)in);
 	}
+	for(size_t i=0;i<m_sourceContextFeatures.size();++i) {
+		// clear cached values
+		m_sourceContextFeatures[i]->InitializeForInput();
+	}
+
 	//something LMs could do before translating a sentence
 	LMList::const_iterator iterLM;
 	for (iterLM = m_languageModel.begin() ; iterLM != m_languageModel.end() ; ++iterLM)

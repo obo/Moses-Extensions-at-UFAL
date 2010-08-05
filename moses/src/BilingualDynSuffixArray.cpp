@@ -313,7 +313,7 @@ SAPhrase BilingualDynSuffixArray::TrgPhraseFromSntIdx(const PhrasePair& phrasepa
 	}
 	return phraseIds;
 }
-	
+
 TargetPhrase* BilingualDynSuffixArray::GetMosesFactorIDs(const SAPhrase& phrase) const 
 {
 	TargetPhrase* targetPhrase = new TargetPhrase(Output);

@@ -66,6 +66,7 @@ Parameter::Parameter()
 	AddParam("report-all-factors", "report all factors in output, not just first");
 	AddParam("report-all-factors-in-n-best", "Report all factors in n-best-lists. Default is false");
 	AddParam("report-segmentation", "t", "report phrase segmentation in the output");
+	AddParam("source-context-file", "scf", "location and properties of source-context features including suffix array file");
 	AddParam("stack", "s", "maximum stack size for histogram pruning");
 	AddParam("stack-diversity", "sd", "minimum number of hypothesis of each coverage in stack (default 0)");
 	AddParam("translation-details", "T", "for each best translation hypothesis, print out details about what sourcce spans were used, dropped");
@@ -79,6 +80,7 @@ Parameter::Parameter()
 	AddParam("weight-i", "I", "weight(s) for word insertion - used for parameters from confusion network and lattice input links");
 	AddParam("weight-l", "lm", "weight(s) for language models");
 	AddParam("weight-lex", "lex", "weight for global lexical model");
+	AddParam("weight-sc", "sc", "weights for source-context model");
 	AddParam("weight-t", "tm", "weights for translation model components");
 	AddParam("weight-w", "w", "weight for word penalty");
 	AddParam("weight-u", "u", "weight for unknown word penalty");
@@ -361,7 +363,7 @@ bool Parameter::FilesExist(const string &paramName, size_t tokenizeIndex,std::ve
 		if (tokenizeIndex >= vec.size())
 		{
 			stringstream errorMsg("");
-			errorMsg << "Expected at least " << (tokenizeIndex+1) << " tokens per emtry in '"
+			errorMsg << "Expected at least " << (tokenizeIndex+1) << " tokens per entry in '"
 							<< paramName << "', but only found "
 							<< vec.size();
 			UserMessage::Add(errorMsg.str());
