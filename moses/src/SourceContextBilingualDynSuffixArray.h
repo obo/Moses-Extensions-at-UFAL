@@ -109,6 +109,16 @@ protected:
 
 // --------------------------------------------------------------------
 
+class PhrasePosTriple {
+public:
+	size_t srcStartPos;
+	size_t srcEndPos;
+	SAPhrase trgPhrase;
+	PhrasePosTriple( size_t start, size_t end, SAPhrase trg): 
+		srcStartPos(start), srcEndPos(end), trgPhrase(trg) {}
+	bool operator<(const PhrasePosTriple& compare) const;
+};
+
 class SourceContextBilingualDynSuffixArray: public BilingualDynSuffixArray {
 
 friend class ExactCollocationScxFeature;
@@ -151,7 +161,7 @@ protected:
 
 	std::map<SAPhrase, std::vector<unsigned> > m_cacheSourcePhrase;
 	std::map<SAPhrase, std::vector<unsigned> > m_cacheTargetPhrase;
-	std::map<std::pair<SAPhrase,SAPhrase>, Scores > m_cacheScores;
+	std::map<PhrasePosTriple, Scores > m_cacheScores;
 
 	int LoadCorpusWithRestrFactors(InputFileStream& corpus, 
 		const FactorList& factors,

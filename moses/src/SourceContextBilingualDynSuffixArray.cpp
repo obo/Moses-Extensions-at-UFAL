@@ -282,6 +282,21 @@ float RootPosDependencyScxFeature::Evaluate( const unsigned srcCorpusIndex, cons
 }
 
 
+bool PhrasePosTriple::operator<(const PhrasePosTriple& compare) const {
+	if( srcStartPos < compare.srcStartPos) {return true;}
+	else if( srcStartPos > compare.srcStartPos) {return false;}
+	// source start position is the same
+	else {
+		if( srcEndPos < compare.srcEndPos) {return true;}
+		else if( srcEndPos > compare.srcEndPos) {return false;}
+		// source end position is the same
+		else {
+			// compare target phrase
+			return (trgPhrase < compare.trgPhrase) ? true : false;
+		}
+	}
+}
+
 // ---------- SourceContextBilingualDynSuffixArray ---------------
 
 SourceContextBilingualDynSuffixArray::SourceContextBilingualDynSuffixArray(const std::vector<std::string>& features):
@@ -540,9 +555,10 @@ void SourceContextBilingualDynSuffixArray::GetSourceContextScores(const Translat
 		return; 
 	}
 
-	std::map<std::pair<SAPhrase,SAPhrase>, Scores >::iterator pairIt;
+	std::map<PhrasePosTriple, Scores >::iterator pairIt;
+	PhrasePosTriple triple(transOption.GetStartPos(), transOption.GetEndPos(), trgLocalIDs);
 	// check whether we have already computed this scores
-	if( (pairIt = m_cacheScores.find( std::make_pair(srcLocalIDs, trgLocalIDs))) != m_cacheScores.end()) {
+	if( (pairIt = m_cacheScores.find( triple)) != m_cacheScores.end()) {
 		assert( scores.size() == pairIt->second.size());
 		// copy cached scores and return;
 		scores = pairIt->second;
@@ -599,8 +615,7 @@ void SourceContextBilingualDynSuffixArray::GetSourceContextScores(const Translat
 			scores[0] = LogOfLogisticFn(aggregateSum);
 		}
 		// cache computed scores
-		m_cacheScores.insert( 
-			std::make_pair( std::make_pair(srcLocalIDs, trgLocalIDs), scores));
+		m_cacheScores.insert(std::make_pair( triple, scores));
 	}
 	return;
 }
