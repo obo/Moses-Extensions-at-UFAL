@@ -20,6 +20,7 @@ public:
   DynSuffixArray(vuint_t*);
   ~DynSuffixArray();
   bool GetCorpusIndex(const vuint_t*, vuint_t*);
+  bool GetCorpusIndexSample(const vuint_t* phrase, vuint_t* indices, size_t maxSampleCount);
   void Load(FILE*);
   void Save(FILE*);
   void InsertFactor(vuint_t*, unsigned);  
