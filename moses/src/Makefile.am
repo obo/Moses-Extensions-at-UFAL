@@ -83,6 +83,8 @@ libmoses_la_HEADERS = \
         SearchNormal.h \
         Sentence.h \
         SentenceStats.h \
+	SourceContextBilingualDynSuffixArray.h \
+	SourceContextFeatures.h \
         SquareMatrix.h \
         StaticData.h \
         TargetPhrase.h \
@@ -209,6 +211,8 @@ libmoses_la_SOURCES = \
         SearchNormal.cpp \
         Sentence.cpp \
         SentenceStats.cpp \
+	SourceContextBilingualDynSuffixArray.cpp \
+	SourceContextFeatures.cpp \
         SquareMatrix.cpp \
         StaticData.cpp \
         TargetPhrase.cpp \

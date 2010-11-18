@@ -43,6 +43,9 @@ public:
 
 	size_t GetTargetSize() const
 	{ return m_endTarget - m_startTarget + 1; }
+	size_t GetSourceSize() const
+	{ return m_endSource - m_startSource + 1; }
+
 };
 	
 class SentenceAlignment 
@@ -74,14 +77,14 @@ class BilingualDynSuffixArray {
 public: 
 	BilingualDynSuffixArray();
 	~BilingualDynSuffixArray();
-	bool Load( const std::vector<FactorType>& inputFactors,
+	virtual bool Load( const std::vector<FactorType>& inputFactors,
 		const std::vector<FactorType>& outputTactors,
 		std::string source, std::string target, std::string alignments, 
 		const std::vector<float> &weight);
 	void GetTargetPhrasesByLexicalWeight(const Phrase& src, std::vector< std::pair<Scores, TargetPhrase*> >& target) const;
 	void CleanUp();
   void addSntPair(string& source, string& target, string& alignment);
-private:
+protected:
 	DynSuffixArray* m_srcSA;
 	DynSuffixArray* m_trgSA;
 	std::vector<wordID_t>* m_srcCorpus;

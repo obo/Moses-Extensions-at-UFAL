@@ -39,6 +39,7 @@ namespace Moses {
   class DistortionScoreProducer;
   class UnknownWordPenaltyProducer;
   class GlobalLexicalModel;
+  class SourceContextFeatures;
 
 /**
  * Enables the configuration of multiple translation systems.
@@ -57,6 +58,7 @@ class TranslationSystem {
       void AddDecodeGraph(DecodeGraph* decodeGraph);
       void AddReorderModel(LexicalReordering* reorderModel);
       void AddGlobalLexicalModel(GlobalLexicalModel* globalLexicalModel);
+      void AddSourceContextModel(SourceContextFeatures* sourceContextModel);
       
       //Insert non-core feature function
       void AddFeatureFunction(const FeatureFunction* featureFunction);
@@ -105,6 +107,7 @@ class TranslationSystem {
         std::vector<GenerationDictionary*> m_generationDictionaries;
         LMList m_languageModels;
         std::vector<GlobalLexicalModel*> m_globalLexicalModels;
+        std::vector<SourceContextFeatures*> m_sourceContextModels;
         
         //All stateless FFs, except those that cache scores in T-Option
         std::vector<const StatelessFeatureFunction*> m_statelessFFs;

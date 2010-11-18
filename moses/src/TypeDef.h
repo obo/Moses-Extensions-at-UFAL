@@ -105,7 +105,7 @@ const size_t DEFAULT_VERBOSE_LEVEL = 1;
 // can only be 2 at the moment
 const int NUM_LANGUAGES = 2;
 
-const size_t MAX_NUM_FACTORS = 4;
+const size_t MAX_NUM_FACTORS = 6;
 
 enum FactorDirection
 {

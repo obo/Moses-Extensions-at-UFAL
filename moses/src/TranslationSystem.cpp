@@ -26,6 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "DecodeStep.h"
 #include "DummyScoreProducers.h"
 #include "GlobalLexicalModel.h"
+#include "SourceContextFeatures.h"
 #include "LexicalReordering.h"
 #include "StaticData.h"
 #include "TranslationSystem.h"
@@ -71,6 +72,11 @@ namespace Moses {
     void TranslationSystem::AddGlobalLexicalModel(GlobalLexicalModel* globalLexicalModel) {
       m_globalLexicalModels.push_back(globalLexicalModel);
       AddFeatureFunction(globalLexicalModel);
+    }
+
+    void TranslationSystem::AddSourceContextModel(SourceContextFeatures* sourceContextModel) {
+      m_sourceContextModels.push_back(sourceContextModel);
+      AddFeatureFunction(sourceContextModel);
     }
     
     
@@ -118,6 +124,9 @@ namespace Moses {
       }
       for(size_t i=0;i<m_globalLexicalModels.size();++i) {
         m_globalLexicalModels[i]->InitializeForInput((Sentence const&)source);
+      }
+      for(size_t i=0;i<m_sourceContextModels.size();++i) {
+        m_sourceContextModels[i]->InitializeForInput();
       }
   
       LMList::const_iterator iterLM;

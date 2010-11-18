@@ -215,6 +215,45 @@ bool DynSuffixArray::GetCorpusIndex(const vuint_t* phrase, vuint_t* indices) {
   return (indices->size() > 0);
 }
 
+bool DynSuffixArray::GetCorpusIndexSample(const vuint_t* phrase, vuint_t* indices, size_t maxSampleCount) {
+  pair<vuint_t::iterator,vuint_t::iterator> bounds;
+  indices->clear();
+  size_t phrasesize = phrase->size();
+  // find lower and upper bounds on phrase[0]
+  bounds = std::equal_range(m_F->begin(), m_F->end(), phrase->at(0));
+  // bounds holds first and (last + 1) index of phrase[0] in m_SA
+  size_t lwrBnd = size_t(bounds.first - m_F->begin());
+  size_t uprBnd = size_t(bounds.second - m_F->begin());
+  size_t size = uprBnd - lwrBnd;
+  if(size == 0) return false;  // not found
+  if(phrasesize == 1) {
+    // return all occurrences if maxSampleCount=0
+    int jump = (maxSampleCount) ? (size / maxSampleCount) + 1 : 1;
+    // make selection
+    for(size_t i=lwrBnd; i < uprBnd; i+=jump) {
+      indices->push_back(m_SA->at(i));
+    }
+    return (indices->size() > 0);
+  }
+  //find longer phrases if they exist
+  for(size_t i = lwrBnd; i < uprBnd; ++i) {
+    size_t crpIdx = m_SA->at(i);
+    if((crpIdx + phrasesize) >= m_corpus->size()) continue; // past end of corpus
+    for(size_t pos = 1; pos < phrasesize; ++pos) { // for all following words
+      if(m_corpus->at(crpIdx + pos) != phrase->at(pos)) {  // if word doesn't match
+        if(indices->size() > 0) i = uprBnd;  // past the phrases since SA is ordered
+        break; 
+      }
+      else if(pos == phrasesize-1) { // found phrase 
+        indices->push_back(crpIdx + pos);  // store rigthmost index of phrase 
+    	if( indices->size() == maxSampleCount) return (indices->size() > 0);
+      }
+    }  
+  }
+  //cerr << "Total count of phrase = " << indices->size() << endl;
+  return (indices->size() > 0);
+}
+
 void DynSuffixArray::Save(FILE* fout) {
   fWriteVector(fout, *m_SA);
 }
