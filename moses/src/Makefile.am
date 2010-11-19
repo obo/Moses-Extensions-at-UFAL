@@ -8,9 +8,10 @@ libmoses_la_HEADERS = \
         BilingualDynSuffixArray.h \
         BitmapContainer.h \
         CellCollection.h \
-        ChartRule.h \
-        ChartRuleCollection.h \
+        ChartTranslationOption.h \
+        ChartTranslationOptionList.h \
         ConfusionNet.h \
+        DecodeFeature.h \
         DecodeGraph.h \
         DecodeStep.h \
         DecodeStepGeneration.h \
@@ -45,6 +46,7 @@ libmoses_la_HEADERS = \
         LanguageModel.h \
         LanguageModelJoint.h \
         LanguageModelFactory.h \
+        LanguageModelImplementation.h \
         LanguageModelInternal.h \
         LanguageModelMultiFactor.h \
         LanguageModelRemote.h \
@@ -93,6 +95,7 @@ libmoses_la_HEADERS = \
         TranslationOptionCollectionConfusionNet.h \
         TranslationOptionCollectionText.h \
         TranslationOptionList.h \
+        TranslationSystem.h \
         TreeInput.h \
         TrellisPath.h \
         TrellisPathCollection.h \
@@ -135,9 +138,10 @@ libmoses_la_SOURCES = \
         AlignmentInfo.cpp \
         BilingualDynSuffixArray.cpp \
         BitmapContainer.cpp \
-        ChartRule.cpp \
-        ChartRuleCollection.cpp \
+        ChartTranslationOption.cpp \
+        ChartTranslationOptionList.cpp \
         ConfusionNet.cpp \
+        DecodeFeature.cpp \
         DecodeGraph.cpp \
         DecodeStep.cpp \
         DecodeStepGeneration.cpp \
@@ -168,6 +172,7 @@ libmoses_la_SOURCES = \
         LVoc.cpp \
         LanguageModel.cpp \
         LanguageModelFactory.cpp \
+        LanguageModelImplementation.cpp \
         LanguageModelInternal.cpp \
         LanguageModelJoint.cpp \
         LanguageModelMultiFactor.cpp \
@@ -218,6 +223,7 @@ libmoses_la_SOURCES = \
         TranslationOptionCollectionConfusionNet.cpp \
         TranslationOptionCollectionText.cpp \
         TranslationOptionList.cpp \
+        TranslationSystem.cpp \
         TreeInput.cpp \
         TrellisPath.cpp \
         TrellisPathCollection.cpp \
@@ -272,6 +278,10 @@ if INTERNAL_LM
 libmoses_la_SOURCES += LanguageModelInternal.cpp \
 		      NGramCollection.cpp \
 		      NGramNode.cpp
+endif
+
+if KEN_LM
+libmoses_la_SOURCES += LanguageModelKen.cpp
 endif
 
 libmoses_la_LIBADD = $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB)

@@ -33,7 +33,7 @@
 #include "StaticData.h"
 #include "WordsRange.h"
 #include "UserMessage.h"
-#include "ChartRuleCollection.h"
+#include "ChartTranslationOptionList.h"
 #include "DotChart.h"
 #include "FactorCollection.h"
 
@@ -79,19 +79,16 @@ bool PhraseDictionarySCFG::Load(const std::vector<FactorType> &input
 																			 , const vector<float> &weight
 																			 , size_t tableLimit
 																			 , const LMList &languageModels
-																			 , float weightWP)
+																			 , const WordPenaltyProducer* wpProducer)
 {
 	m_filePath = filePath;
 	m_tableLimit = tableLimit;
 	
-	//factors
-	m_inputFactors = FactorMask(input);
-	m_outputFactors = FactorMask(output);
 	
 	// data from file
 	InputFileStream inFile(filePath);
 			
-	bool ret = Load(input, output, inFile, weight, tableLimit, languageModels, weightWP);		
+	bool ret = Load(input, output, inFile, weight, tableLimit, languageModels, wpProducer);		
 	return ret;
 }
 
@@ -101,14 +98,13 @@ bool PhraseDictionarySCFG::Load(const std::vector<FactorType> &input
 																			 , const std::vector<float> &weight
 																			 , size_t tableLimit
 																			 , const LMList &languageModels
-																			 , float weightWP)
+																			 , const WordPenaltyProducer* wpProducer)
 {
 	PrintUserTime("Start loading new format pt model");
 	
 	const StaticData &staticData = StaticData::Instance();
 	const std::string& factorDelimiter = staticData.GetFactorDelimiter();
 	
-	VERBOSE(2,"PhraseDictionarySCFG: input=" << m_inputFactors << "  output=" << m_outputFactors << std::endl);
 	
 	string line;
 	size_t count = 0;
@@ -171,7 +167,7 @@ bool PhraseDictionarySCFG::Load(const std::vector<FactorType> &input
 		std::transform(scoreVector.begin(),scoreVector.end(),scoreVector.begin(),TransformScore);
 		std::transform(scoreVector.begin(),scoreVector.end(),scoreVector.begin(),FloorScore);
 		
-		targetPhrase->SetScoreChart(GetFeature(), scoreVector, weight, languageModels);
+		targetPhrase->SetScoreChart(GetFeature(), scoreVector, weight, languageModels,wpProducer);
 		
 		// count info for backoff
 		if (tokens.size() >= 6)
@@ -185,8 +181,11 @@ bool PhraseDictionarySCFG::Load(const std::vector<FactorType> &input
 	
 	// cleanup cache
 	
-	// sort each target phrase collection
-	m_collection.Sort(m_tableLimit);
+	// prune each target phrase collection
+	if (m_tableLimit)
+	{
+		m_collection.Prune(m_tableLimit);
+	}
 	
 	return true;
 }
@@ -219,11 +218,11 @@ PhraseDictionaryNodeSCFG &PhraseDictionarySCFG::GetOrCreateNode(const Phrase &so
 			++iterAlign;
 			const Word &targetNonTerm = target.GetWord(targetNonTermInd);
 
-			currNode = currNode->GetOrCreateChild(targetNonTerm, sourceNonTerm);
+			currNode = currNode->GetOrCreateChild(sourceNonTerm, targetNonTerm);
 		}
 		else
 		{
-			currNode = currNode->GetOrCreateChild(word, word);
+			currNode = currNode->GetOrCreateChild(word);
 		}
 		
 		assert(currNode != NULL);
@@ -265,18 +264,18 @@ const TargetPhraseCollection *PhraseDictionarySCFG::GetTargetPhraseCollection(co
 
 void PhraseDictionarySCFG::InitializeForInput(const InputType& input)
 {
-	assert(m_runningNodesVec.size() == 0);
+	assert(m_processedRuleColls.size() == 0);
 	size_t sourceSize = input.GetSize();
-	m_runningNodesVec.resize(sourceSize);
+	m_processedRuleColls.resize(sourceSize);
 	
-	for (size_t ind = 0; ind < m_runningNodesVec.size(); ++ind)
+	for (size_t ind = 0; ind < m_processedRuleColls.size(); ++ind)
 	{
 		ProcessedRule *initProcessedRule = new ProcessedRule(m_collection);
 		
-		ProcessedRuleStack *processedStack = new ProcessedRuleStack(sourceSize - ind + 1);
-		processedStack->Add(0, initProcessedRule); // init rule. stores the top node in tree
+		ProcessedRuleColl *processedRuleColl = new ProcessedRuleColl(sourceSize - ind + 1);
+		processedRuleColl->Add(0, initProcessedRule); // init rule. stores the top node in tree
 		
-		m_runningNodesVec[ind] = processedStack;
+		m_processedRuleColls[ind] = processedRuleColl;
 	}
 }
 
@@ -285,35 +284,9 @@ PhraseDictionarySCFG::~PhraseDictionarySCFG()
 	CleanUp();
 }
 
-void PhraseDictionarySCFG::SetWeightTransModel(const vector<float> &weightT)
-{
-	PhraseDictionaryNodeSCFG::iterator iterDict;
-	for (iterDict = m_collection.begin() ; iterDict != m_collection.end() ; ++iterDict)
-	{
-		PhraseDictionaryNodeSCFG::InnerNodeMap &innerNode = iterDict->second;
-		PhraseDictionaryNodeSCFG::InnerNodeMap::iterator iterInner;
-		for (iterInner = innerNode.begin() ; iterInner != innerNode.end() ; ++iterInner)
-		{
-			// recursively set weights in nodes
-			PhraseDictionaryNodeSCFG &node = iterInner->second;
-			node.SetWeightTransModel(this, weightT);
-		}
-	}
-}
-
-
 void PhraseDictionarySCFG::CleanUp()
-{
-	//RemoveAllInColl(m_chartTargetPhraseColl);
-	std::vector<ChartRuleCollection*>::iterator iter;
-	for (iter = m_chartTargetPhraseColl.begin(); iter != m_chartTargetPhraseColl.end(); ++iter)
-	{
-		ChartRuleCollection *item = *iter;
-		ChartRuleCollection::Delete(item);
-	}
-	m_chartTargetPhraseColl.clear();
-	
-	RemoveAllInColl(m_runningNodesVec);
+{	
+	RemoveAllInColl(m_processedRuleColls);
 }
 
 TO_STRING_BODY(PhraseDictionarySCFG);
@@ -321,12 +294,19 @@ TO_STRING_BODY(PhraseDictionarySCFG);
 // friend
 ostream& operator<<(ostream& out, const PhraseDictionarySCFG& phraseDict)
 {
+	typedef PhraseDictionaryNodeSCFG::TerminalMap TermMap;
+	typedef PhraseDictionaryNodeSCFG::NonTerminalMap NonTermMap;
+
 	const PhraseDictionaryNodeSCFG &coll = phraseDict.m_collection;
-	PhraseDictionaryNodeSCFG::const_iterator iter;
-	for (iter = coll.begin() ; iter != coll.end() ; ++iter)
+	for (NonTermMap::const_iterator p = coll.m_nonTermMap.begin(); p != coll.m_nonTermMap.end(); ++p)
 	{
-		const Word &word = (*iter).first;
-		out << word;
+		const Word &sourceNonTerm = p->first.first;
+		out << sourceNonTerm;
+	}
+	for (TermMap::const_iterator p = coll.m_sourceTermMap.begin(); p != coll.m_sourceTermMap.end(); ++p)
+	{
+		const Word &sourceTerm = p->first;
+		out << sourceTerm;
 	}
 	return out;
 }

@@ -24,14 +24,13 @@
 #include "ChartHypothesis.h"
 #include "QueueEntry.h"
 #include "ChartCell.h"
-#include "ChartTranslationOption.h"
 #include "ChartManager.h"
 #include "../../moses/src/TargetPhrase.h"
 #include "../../moses/src/Phrase.h"
 #include "../../moses/src/StaticData.h"
 #include "../../moses/src/DummyScoreProducers.h"
 #include "../../moses/src/LMList.h"
-#include "../../moses/src/ChartRule.h"
+#include "../../moses/src/ChartTranslationOption.h"
 
 using namespace std;
 using namespace Moses;
@@ -45,12 +44,12 @@ unsigned int Hypothesis::s_HypothesesCreated = 0;
 #endif
 
 Hypothesis::Hypothesis(const QueueEntry &queueEntry, Manager &manager)
-:m_rule(queueEntry.GetTranslationOption().GetChartRule())
-,m_wordsConsumedTargetOrder(queueEntry.GetTranslationOption().GetChartRule().GetWordsConsumedTargetOrder())
+:m_transOpt(queueEntry.GetTranslationOption())
+,m_wordsConsumedTargetOrder(queueEntry.GetTranslationOption().GetWordsConsumedTargetOrder())
 ,m_id(++s_HypothesesCreated)
 ,m_currSourceWordsRange(queueEntry.GetTranslationOption().GetSourceWordsRange())
-,m_contextPrefix(Output, StaticData::Instance().GetAllLM().GetMaxNGramOrder())
-,m_contextSuffix(Output, StaticData::Instance().GetAllLM().GetMaxNGramOrder())
+,m_contextPrefix(Output, manager.GetTranslationSystem()->GetLanguageModels().GetMaxNGramOrder())
+    ,m_contextSuffix(Output, manager.GetTranslationSystem()->GetLanguageModels().GetMaxNGramOrder())
 ,m_arcList(NULL)
 ,m_manager(manager)
 {
@@ -73,7 +72,7 @@ Hypothesis::Hypothesis(const QueueEntry &queueEntry, Manager &manager)
 		m_prevHypos.push_back(prevHypo);
 	}
 
-	size_t maxNGram = StaticData::Instance().GetAllLM().GetMaxNGramOrder();
+    size_t maxNGram = manager.GetTranslationSystem()->GetLanguageModels().GetMaxNGramOrder();
 	CalcPrefix(m_contextPrefix, maxNGram - 1);
 	CalcSuffix(m_contextSuffix, maxNGram - 1);
 }
@@ -235,11 +234,11 @@ void Hypothesis::CalcScore()
 
 void Hypothesis::CalcLMScore()
 {
+  const LMList& lmList = m_manager.GetTranslationSystem()->GetLanguageModels();
 	assert(m_lmNGram.GetWeightedScore() == 0);
 
-	m_scoreBreakdown.ZeroAllLM();
+	m_scoreBreakdown.ZeroAllLM(lmList);
 
-	const LMList &lmList = StaticData::Instance().GetAllLM();
 	Phrase outPhrase(Output); // = GetOutputPhrase();
 	bool calcNow = false, firstPhrase = true;
 
@@ -258,7 +257,7 @@ void Hypothesis::CalcLMScore()
 
 			if (numTargetTerminals >= lmList.GetMaxNGramOrder() - 1)
 			{ // large hypo (for trigram lm, another hypo equal or over 2 words). just take the prefix & suffix
-				m_lmNGram.PlusEqualsAllLM(prevHypo->m_lmNGram);
+				m_lmNGram.PlusEqualsAllLM(lmList, prevHypo->m_lmNGram);
 
 				// calc & add overlapping lm scores
 				// prefix
@@ -299,8 +298,8 @@ void Hypothesis::CalcLMScore()
 									, m_lmNGram
 									, (firstPhrase) ? &m_lmPrefix : NULL);
 
-	m_scoreBreakdown.PlusEqualsAllLM(m_lmPrefix);
-	m_scoreBreakdown.PlusEqualsAllLM(m_lmNGram);
+    m_scoreBreakdown.PlusEqualsAllLM(lmList, m_lmPrefix);
+    m_scoreBreakdown.PlusEqualsAllLM(lmList, m_lmNGram);
 
 /*
 	// lazy way. keep for comparison

@@ -35,19 +35,13 @@ using namespace std;
 namespace Moses
 {
 
-	LanguageModelParallelBackoff::LanguageModelParallelBackoff(bool registerScore, ScoreIndexManager &scoreIndexManager)
-	:LanguageModelMultiFactor(registerScore, scoreIndexManager)
-	{
-		 ///
-	}
-	
 	LanguageModelParallelBackoff::~LanguageModelParallelBackoff()
 	{
      ///
 	}
 
 
-bool LanguageModelParallelBackoff::Load(const std::string &filePath, const std::vector<FactorType> &factorTypes, float weight, size_t nGramOrder)
+bool LanguageModelParallelBackoff::Load(const std::string &filePath, const std::vector<FactorType> &factorTypes, size_t nGramOrder)
 	{
 
     cerr << "Loading Language Model Parallel Backoff!!!\n";
@@ -99,7 +93,6 @@ bool LanguageModelParallelBackoff::Load(const std::string &filePath, const std::
 
 		cerr << "fngramLM reads!\n";
 
-		m_weight = weight;
 		m_filePath = filePath;
 		m_nGramOrder= nGramOrder;
 	
@@ -139,8 +132,7 @@ bool LanguageModelParallelBackoff::Load(const std::string &filePath, const std::
 			//(*lmIdMap)[factorIdEnd * 10 + index] = GetLmID(EOS_);
 
 		}*/
-
-
+    return true;
 	}
 
 VocabIndex LanguageModelParallelBackoff::GetLmID( const std::string &str ) const
@@ -233,7 +225,7 @@ void LanguageModelParallelBackoff::CreateFactors()
 		
 }
 
-	float LanguageModelParallelBackoff::GetValue(const std::vector<const Word*> &contextFactor, State* finalState, unsigned int* len) const
+	float LanguageModelParallelBackoff::GetValueForgotState(const std::vector<const Word*> &contextFactor, FFState &outState, unsigned int* len) const
 	{
 
     static WidMatrix widMatrix;		
@@ -297,6 +289,18 @@ void LanguageModelParallelBackoff::CreateFactors()
 		float p = m_srilmModel->wordProb( (*widMatrix), m_nGramOrder - 1, m_nGramOrder );
     return FloorScore(TransformLMScore(p)); */
 	}
-	
+
+  // The old version did not initialize finalState like it should.  Technically that makes the behavior undefined, so it's not clear what else to do here.  
+  FFState *LanguageModelParallelBackoff::NewState(const FFState *from) const {
+    return NULL;
+  }
+
+  FFState *LanguageModelParallelBackoff::GetNullContextState() const {
+    return NULL;
+  }
+
+  FFState *LanguageModelParallelBackoff::GetBeginSentenceState() const {
+    return NULL;
+  }
 }
 

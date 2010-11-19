@@ -37,7 +37,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "TargetPhrase.h"
 #include "Dictionary.h"
 #include "TargetPhraseCollection.h"
-#include "FeatureFunction.h"
+#include "DecodeFeature.h"
 
 namespace Moses
 {
@@ -45,8 +45,9 @@ namespace Moses
 class StaticData;
 class InputType;
 class WordsRange;
-class ChartRuleCollection;
+class ChartTranslationOptionList;
 class CellCollection;
+class TranslationSystem;
 
 class PhraseDictionaryFeature;
 /**
@@ -60,10 +61,6 @@ class PhraseDictionary: public Dictionary {
     size_t GetTableLimit() const { return m_tableLimit; }
     DecodeType GetDecodeType() const    {   return Translate;   }
     const PhraseDictionaryFeature* GetFeature() const;
-    /** set/change translation weights and recalc weighted score for each translation. 
-        * TODO This may be redundant now we use ScoreCollection
-    */
-    virtual void SetWeightTransModel(const std::vector<float> &weightT)=0;
 
     //! find list of translations that can translates src. Only for phrase input
     virtual const TargetPhraseCollection *GetTargetPhraseCollection(const Phrase& src) const=0;
@@ -73,8 +70,11 @@ class PhraseDictionary: public Dictionary {
     virtual void AddEquivPhrase(const Phrase &source, const TargetPhrase &targetPhrase)=0;
     virtual void InitializeForInput(InputType const& source) = 0;
     
-		virtual const ChartRuleCollection *GetChartRuleCollection(InputType const& src, WordsRange const& range,
-																															bool adhereTableLimit,const CellCollection &cellColl) const=0;
+		virtual void GetChartRuleCollection(ChartTranslationOptionList &outColl
+																				, InputType const& src
+																				, WordsRange const& range
+																				, bool adhereTableLimit
+																				, const CellCollection &cellColl) const=0;
 
   protected:
     size_t m_tableLimit;
@@ -85,7 +85,7 @@ class PhraseDictionary: public Dictionary {
 /**
  * Represents a feature derived from a phrase table.
  */
-class PhraseDictionaryFeature :  public StatelessFeatureFunction
+class PhraseDictionaryFeature :  public DecodeFeature
 {
  
 
@@ -114,20 +114,22 @@ class PhraseDictionaryFeature :  public StatelessFeatureFunction
 	size_t GetNumScoreComponents() const;
 
 	size_t GetNumInputScores() const;
-
     
-	const PhraseDictionary* GetDictionary(const InputType& source);
-    // TODO - get rid of this, make Cleanup() const. only to be called by static data
-    PhraseDictionary* GetDictionary();
+    //Initialises the dictionary (may involve loading from file)
+    void InitDictionary(const TranslationSystem* system);
+
+    //Initialise the dictionary for this source (in this thread)
+    void InitDictionary(const TranslationSystem* system,const InputType& source);
+    
+    //Get the dictionary. Be sure to initialise it first.
+    const PhraseDictionary* GetDictionary() const;
 	
  private:
      /** Load the appropriate phrase table */
-     PhraseDictionary* LoadPhraseTable();
+    PhraseDictionary* LoadPhraseTable(const TranslationSystem* system);
      
     size_t m_numScoreComponent;
     unsigned m_numInputScores;
-    std::vector<FactorType> m_input;
-    std::vector<FactorType> m_output;
     std::string m_filePath;
     std::vector<float> m_weight;
     size_t m_tableLimit;

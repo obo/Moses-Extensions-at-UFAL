@@ -23,9 +23,9 @@ public:
   bool GetCorpusIndexSample(const vuint_t* phrase, vuint_t* indices, size_t maxSampleCount);
   void Load(FILE*);
   void Save(FILE*);
-  void InsertFactor(vuint_t*, unsigned);  
-  void DeleteFactor(unsigned, unsigned);
-  void SubstituteFactor(vuint_t*, unsigned);
+  void Insert(vuint_t*, unsigned);  
+  void Delete(unsigned, unsigned);
+  void Substitute(vuint_t*, unsigned);
 
 private: 
   vuint_t* m_SA;

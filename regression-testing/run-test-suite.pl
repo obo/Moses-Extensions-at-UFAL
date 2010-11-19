@@ -10,6 +10,8 @@ use Getopt::Long;
 my @tests = qw (
   chart.target-syntax
   chart.hierarchical
+  chart.target-syntax.ondisk
+  chart.hierarchical.ondisk
   phrase.basic-surface-only
   phrase.ptable-filtering
   phrase.multi-factor
@@ -52,7 +54,7 @@ $test_run .= " --test-dir=$test_dir" if $test_dir;
 
 print "Data directory: $data_dir\n";
 
-die "Please specify the phrase-base & chart decoder to test with --decoder-phrase=[path] --decoder-chart=[path] \n" unless ($decoderPhrase and $decoderChart);
+die "Please specify the phrase-based decoder & the chart decoder to test with --decoder-phrase=[path] --decoder-chart=[path] \n" unless ($decoderPhrase and $decoderChart);
 
 die "Cannot locate executable called $decoderPhrase\n" unless (-x $decoderPhrase);
 
@@ -106,7 +108,7 @@ my $fail_percentage = int(100 * $fail / $total);
 my $pass_percentage = int(100 * ($total-$fail) / $total);
 print "\n$pass_percentage% of the tests passed.\n";
 print "$fail_percentage% of the tests failed.\n";
-if ($fail_percentage>0) { print "\nPLEASE INVESTIAGE THESE FAILED TESTS: @failed\n"; }
+if ($fail_percentage>0) { print "\nPLEASE INVESTIGATE THESE FAILED TESTS: @failed\n"; }
 
 sub do_test {
   my ($test) = @_;

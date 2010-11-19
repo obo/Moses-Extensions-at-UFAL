@@ -169,7 +169,8 @@ protected:
 		const FactorDirection& direction, 
 		std::vector<wordID_t>& cArray, 
 		std::vector<wordID_t>& cArrayRestr, 
-		std::vector<wordID_t>& sntArray);
+		std::vector<wordID_t>& sntArray,
+		Vocab*);
 
 	Word RestrictWord( const Word& word, const FactorList& factors) const;
 	Word RestrictWord( const Word& word, const FactorMask& factors) const;

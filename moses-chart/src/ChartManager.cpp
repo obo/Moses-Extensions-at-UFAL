@@ -27,6 +27,7 @@
 #include "ChartTrellisPathList.h"
 #include "ChartTrellisPathCollection.h"
 #include "../../moses/src/StaticData.h"
+#include "../../moses/src/DecodeStep.h"
 
 using namespace std;
 using namespace Moses;
@@ -39,18 +40,26 @@ namespace Moses
 namespace MosesChart
 {
 
-Manager::Manager(InputType const& source)
+Manager::Manager(InputType const& source, const TranslationSystem* system)
 :m_source(source)
 ,m_hypoStackColl(source, *this)
-,m_transOptColl(source, StaticData::Instance().GetDecodeStepVL(source), m_hypoStackColl)
+,m_transOptColl(source, system, m_hypoStackColl)
+,m_system(system)
+,m_start(clock())
+
 {
-	const StaticData &staticData = StaticData::Instance();
-	staticData.InitializeBeforeSentenceProcessing(source);
+	m_system->InitializeBeforeSentenceProcessing(source);
 }
 
 Manager::~Manager()
 {
-	StaticData::Instance().CleanUpAfterSentenceProcessing();
+	m_system->CleanUpAfterSentenceProcessing();
+	
+	clock_t end = clock();
+	float et = (end - m_start);
+	et /= (float)CLOCKS_PER_SEC;
+	VERBOSE(1, "Translation took " << et << " seconds" << endl);
+	
 }
 
 void Manager::ProcessSentence()
@@ -70,7 +79,7 @@ void Manager::ProcessSentence()
 		{
 			size_t endPos = startPos + width - 1;
 			WordsRange range(startPos, endPos);
-			TRACE_ERR(" " << range << "=");
+			//TRACE_ERR(" " << range << "=");
 				
 			// create trans opt
 			m_transOptColl.CreateTranslationOptionsForRange(startPos, endPos);
@@ -86,7 +95,7 @@ void Manager::ProcessSentence()
 			cell.CleanupArcList();
 			cell.SortHypotheses();
 			
-			cerr << cell.GetSize();
+			//cerr << cell.GetSize();
 			//cerr << cell << endl;
 			//cell.OutputSizes(cerr);
 		}

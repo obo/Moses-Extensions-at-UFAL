@@ -24,11 +24,11 @@
 
 #include "PhraseDictionary.h"
 #include "PhraseDictionaryNodeSCFG.h"
-#include "ChartRuleCollection.h"
 #include "CellCollection.h"
 
 namespace Moses
 {
+	class ChartTranslationOptionList;
 	class ProcessedRuleStack;
 	class ProcessedRuleColl;	
 	
@@ -42,12 +42,8 @@ namespace Moses
 			
 		protected:
 			PhraseDictionaryNodeSCFG m_collection;
-			mutable std::vector<ChartRuleCollection*> m_chartTargetPhraseColl;
-			mutable std::vector<ProcessedRuleStack*>	m_runningNodesVec;
-			
-			Phrase									m_prevSource;
-			TargetPhraseCollection	*m_prevPhraseColl;
-			
+			mutable std::vector<ProcessedRuleColl*>	m_processedRuleColls;
+						
 			std::string m_filePath; 
 			
 			TargetPhraseCollection &GetOrCreateTargetPhraseCollection(const Phrase &source, const TargetPhrase &target);
@@ -59,10 +55,8 @@ namespace Moses
 								, const std::vector<float> &weight
 								, size_t tableLimit
 								, const LMList &languageModels
-								, float weightWP);
+								, const WordPenaltyProducer* wpProducer);
 						
-			void 	DeleteDuplicates(ProcessedRuleColl &nodes) const; // keep only backoff, if it exists
-			
 			void CreateSourceLabels(std::vector<Word> &sourceLabels
 															, const std::vector<std::string> &sourceLabelsStr) const;
 			Word CreateCoveredWord(const Word &origSourceLabel, const InputType &src, const WordsRange &range) const;
@@ -70,8 +64,6 @@ namespace Moses
 		public:
 			PhraseDictionarySCFG(size_t numScoreComponent, PhraseDictionaryFeature* feature)
 			: MyBase(numScoreComponent, feature)
-			, m_prevSource(Input)
-			, m_prevPhraseColl(NULL)
 			{
 			}
 			virtual ~PhraseDictionarySCFG();
@@ -88,7 +80,7 @@ namespace Moses
 								, const std::vector<float> &weight
 								, size_t tableLimit
 								, const LMList &languageModels
-						    , float weightWP);
+						    , const WordPenaltyProducer* wpProducer);
 			
 			const TargetPhraseCollection *GetTargetPhraseCollection(const Phrase &source) const;
 			
@@ -103,11 +95,11 @@ namespace Moses
 			
 			void InitializeForInput(const InputType& i);
 			
-			const ChartRuleCollection *GetChartRuleCollection(
-																												InputType const& src
-																												,WordsRange const& range
-																												,bool adhereTableLimit
-																												,const CellCollection &cellColl) const;
+	virtual void GetChartRuleCollection(ChartTranslationOptionList &outColl
+																			,InputType const& src
+																			,WordsRange const& range
+																			,bool adhereTableLimit
+																			,const CellCollection &cellColl) const;
 			
 			void CleanUp();
 		};

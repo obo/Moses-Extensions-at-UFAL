@@ -99,6 +99,7 @@ int main(int argc, char* argv[])
              << " | --MaxSymbolsTarget[" << options.maxSymbolsTarget << "]"
              << " | --MaxSymbolsSource[" << options.maxSymbolsSource << "]"
              << " | --MaxNonTerm[" << options.maxNonTerm << "]"
+             << " | --MaxScope[" << options.maxScope << "]"
              << " | --SourceSyntax | --TargetSyntax"
              << " | --AllowOnlyUnalignedWords | --DisallowNonTermConsecTarget |--NonTermConsecSource |  --NoNonTermFirstWord | --NoFractionalCounting ]\n";
         exit(1);
@@ -164,6 +165,14 @@ int main(int argc, char* argv[])
             options.maxNonTerm = atoi(argv[++i]);
             if (options.maxNonTerm < 1) {
                 cerr << "extract error: --MaxNonTerm should be at least 1" << endl;
+                exit(1);
+            }
+        }
+        // maximum scope (see Hopkins and Langmead (2010))
+        else if (strcmp(argv[i],"--MaxScope") == 0) {
+            options.maxScope = atoi(argv[++i]);
+            if (options.maxScope < 0) {
+                cerr << "extract error: --MaxScope should be at least 0" << endl;
                 exit(1);
             }
         }
@@ -392,7 +401,7 @@ void extractRules( SentenceAlignmentWithSyntax &sentence ) {
                     // are rules not allowed to start non-terminals?
                     int initStartT = options.nonTermFirstWord ? startT : startT + 1;
 
-                    HoleCollection holeColl; // empty hole collection
+                    HoleCollection holeColl(startS, endS); // empty hole collection
                     addHieroRule(sentence, startT, endT, startS, endS,
                             ruleExist, holeColl, 0, initStartT,
                             endT-startT+1, endS-startS+1);
@@ -735,6 +744,11 @@ void addHieroRule( SentenceAlignmentWithSyntax &sentence
                 if (!options.nonTermConsecSource && holeColl.ConsecSource(sourceHole) )
                     continue;
 
+                // check that rule scope would not exceed limit if sourceHole
+                // were added
+                if (holeColl.Scope(sourceHole) > options.maxScope)
+                    continue;
+
                 // require that at least one aligned word is left (unless there are no words at all)
                 if (options.requireAlignedWord && (newWordCountS > 0 || newWordCountT > 0))
                 {
@@ -928,9 +942,9 @@ void writeGlueGrammar( const string & fileName )
     grammarFile.open(fileName.c_str());
     if (!options.targetSyntax)
     {
-        grammarFile << "<s> [X] ||| <s> [S] |||  ||| 1" << endl
-            << "[X][S] </s> [X] ||| [X][S] </s> [S] ||| 0-0 ||| 1" << endl
-            << "[X][S] [X][X] [X] ||| [X][S] [X][X] [S] ||| 0-0 1-1 ||| 2.718" << endl;
+        grammarFile << "<s> [X] ||| <s> [S] ||| 1 ||| ||| 0" << endl
+            << "[X][S] </s> [X] ||| [X][S] </s> [S] ||| 1 ||| 0-0 ||| 0" << endl
+            << "[X][S] [X][X] [X] ||| [X][S] [X][X] [S] ||| 2.718 ||| 0-0 1-1 ||| 0" << endl;
     }
     else
     {
@@ -945,23 +959,23 @@ void writeGlueGrammar( const string & fileName )
             }
         }
         // basic rules
-        grammarFile << "<s> [X] ||| <s> [" << topLabel << "] |||  ||| 1" << endl
-            << "[X][" << topLabel << "] </s> [X] ||| [X][" << topLabel << "] </s> [" << topLabel << "] ||| 0-0 ||| 1" << endl;
+        grammarFile << "<s> [X] ||| <s> [" << topLabel << "] ||| 1  ||| " << endl
+            << "[X][" << topLabel << "] </s> [X] ||| [X][" << topLabel << "] </s> [" << topLabel << "] ||| 1 ||| 0-0 " << endl;
 
         // top rules
         for( map<string,int>::const_iterator i =  targetTopLabelCollection.begin();
                 i !=  targetTopLabelCollection.end(); i++ )
         {
-            grammarFile << "<s> [X][" << i->first << "] </s> [X] ||| <s> [X][" << i->first << "] </s> [" << topLabel << "] ||| 1-1 ||| 1" << endl;
+            grammarFile << "<s> [X][" << i->first << "] </s> [X] ||| <s> [X][" << i->first << "] </s> [" << topLabel << "] ||| 1 ||| 1-1" << endl;
         }
 
         // glue rules
         for( set<string>::const_iterator i =  targetLabelCollection.begin();
                 i !=  targetLabelCollection.end(); i++ )
         {
-            grammarFile << "[X][" << topLabel << "] [X][" << *i << "] [X] ||| [X][" << topLabel << "] [X][" << *i << "] [" << topLabel << "] ||| 0-0 1-1 ||| 2.718" << endl;
+            grammarFile << "[X][" << topLabel << "] [X][" << *i << "] [X] ||| [X][" << topLabel << "] [X][" << *i << "] [" << topLabel << "] ||| 2.718 ||| 0-0 1-1" << endl;
         }
-        grammarFile << "[X][" << topLabel << "] [X][X] [X] ||| [X][" << topLabel << "] [X][X] [" << topLabel << "] ||| 0-0 1-1 ||| 2.718" << endl; // glue rule for unknown word...
+        grammarFile << "[X][" << topLabel << "] [X][X] [X] ||| [X][" << topLabel << "] [X][X] [" << topLabel << "] ||| 2.718 |||  0-0 1-1 " << endl; // glue rule for unknown word...
     }
     grammarFile.close();
 }

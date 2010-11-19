@@ -178,6 +178,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\PhraseAlignment.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\score.cpp"
 				>
 			</File>
@@ -193,6 +197,10 @@
 			>
 			<File
 				RelativePath=".\AlignmentPhrase.h"
+				>
+			</File>
+			<File
+				RelativePath=".\PhraseAlignment.h"
 				>
 			</File>
 			<File

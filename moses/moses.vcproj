@@ -292,15 +292,19 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\ChartRule.cpp"
+				RelativePath=".\src\ChartTranslationOption.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\src\ChartRuleCollection.cpp"
+				RelativePath=".\src\ChartTranslationOptionList.cpp"
 				>
 			</File>
 			<File
 				RelativePath=".\src\ConfusionNet.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\DecodeFeature.cpp"
 				>
 			</File>
 			<File
@@ -688,6 +692,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\TranslationSystem.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\TreeInput.cpp"
 				>
 			</File>
@@ -750,15 +758,19 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\ChartRule.h"
+				RelativePath=".\src\ChartTranslationOption.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\ChartRuleCollection.h"
+				RelativePath=".\src\ChartTranslationOptionList.h"
 				>
 			</File>
 			<File
 				RelativePath=".\src\ConfusionNet.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\DecodeFeature.h"
 				>
 			</File>
 			<File
@@ -863,6 +875,10 @@
 			</File>
 			<File
 				RelativePath=".\src\LanguageModel.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\LanguageModelDelegate.h"
 				>
 			</File>
 			<File
@@ -1071,6 +1087,10 @@
 			</File>
 			<File
 				RelativePath=".\src\TranslationOptionList.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\TranslationSystem.h"
 				>
 			</File>
 			<File

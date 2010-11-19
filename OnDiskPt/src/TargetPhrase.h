@@ -1,12 +1,24 @@
 #pragma once
-/*
- *  TargetPhrase.h
- *  CreateOnDisk
- *
- *  Created by Hieu Hoang on 31/12/2009.
- *  Copyright 2009 __MyCompanyName__. All rights reserved.
- *
- */
+// $Id$
+/***********************************************************************
+ Moses - factored phrase-based, hierarchical and syntactic language decoder
+ Copyright (C) 2009 Hieu Hoang
+ 
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2.1 of the License, or (at your option) any later version.
+ 
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+ 
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ ***********************************************************************/
+
 #include <fstream>
 #include <string>
 #include <vector>
@@ -19,6 +31,7 @@ namespace Moses
 	class TargetPhrase;
 	class LMList;
 	class Phrase;
+  class WordPenaltyProducer;
 }
 
 namespace OnDiskPt
@@ -70,9 +83,8 @@ public:
 																			, const Vocab &vocab
 																			, const Moses::PhraseDictionary &phraseDict
 																			, const std::vector<float> &weightT
-																			, float weightWP
-																			, const Moses::LMList &lmList
-																			, const Moses::Phrase &sourcePhrase) const;
+																			, const Moses::WordPenaltyProducer* wpProducer
+																			, const Moses::LMList &lmList) const;
 	UINT64 ReadOtherInfoFromFile(UINT64 filePos, std::fstream &fileTPColl);
 	UINT64 ReadFromFile(std::fstream &fileTP, size_t numFactors);
 	

@@ -22,16 +22,17 @@
 #pragma once
 
 #include <vector>
-#include "ChartTranslationOptionList.h"
 #include "../../moses/src/InputType.h"
 #include "../../moses/src/DecodeGraph.h"
+#include "../../moses/src/ChartTranslationOptionList.h"
 
 namespace Moses
 {
 	class DecodeGraph;
 	class Word;
-	class ChartRule;
+	class ChartTranslationOption;
 	class WordConsumed;
+  class WordPenaltyProducer;
 };
 
 namespace MosesChart
@@ -43,26 +44,25 @@ class TranslationOptionCollection
 	friend std::ostream& operator<<(std::ostream&, const TranslationOptionCollection&);
 protected:
 	const Moses::InputType		&m_source;
-	std::vector<Moses::DecodeGraph*> m_decodeGraphList;
+	const Moses::TranslationSystem* m_system;
+  std::vector <Moses::DecodeGraph*> m_decodeGraphList;
 	const ChartCellCollection &m_hypoStackColl;
 
-	std::vector< std::vector< TranslationOptionList > >	m_collection; /*< contains translation options */
+	std::vector< std::vector< Moses::ChartTranslationOptionList > >	m_collection; /*< contains translation options */
 	std::vector<Moses::Phrase*> m_unksrcs;
-	std::list<Moses::ChartRule*> m_cacheChartRule;
 	std::list<Moses::TargetPhrase*> m_cacheTargetPhrase;
 	std::list<std::vector<Moses::WordConsumed*>* > m_cachedWordsConsumed;
-
-	virtual void CreateTranslationOptionsForRange(const Moses::DecodeGraph &decodeStepList
-																			, size_t startPosition
+	
+	virtual void CreateTranslationOptionsForRange(const Moses::DecodeGraph& decodeGraph,
+                                        size_t startPosition
 																			, size_t endPosition
 																			, bool adhereTableLimit);
-	void Add(TranslationOptionList &translationOptionList);
 
 	// for adding 1 trans opt in unknown word proc
-	void Add(TranslationOption *transOpt, size_t pos);
+	void Add(Moses::ChartTranslationOption *transOpt, size_t pos);
 
-	TranslationOptionList &GetTranslationOptionList(size_t startPos, size_t endPos);
-	const TranslationOptionList &GetTranslationOptionList(size_t startPos, size_t endPos) const;
+	Moses::ChartTranslationOptionList &GetTranslationOptionList(size_t startPos, size_t endPos);
+	const Moses::ChartTranslationOptionList &GetTranslationOptionList(size_t startPos, size_t endPos) const;
 
 	void ProcessUnknownWord(size_t startPos, size_t endPos);
 
@@ -81,14 +81,14 @@ protected:
 
 public:
 	TranslationOptionCollection(Moses::InputType const& source
-														, const std::vector<Moses::DecodeGraph*> &decodeGraphList
+														, const Moses::TranslationSystem* system
 														, const ChartCellCollection &hypoStackColl);
 	virtual ~TranslationOptionCollection();
 	//virtual void CreateTranslationOptions(const std::vector <Moses::DecodeGraph*> &decodeGraphList);
 	void CreateTranslationOptionsForRange(size_t startPos
 																			, size_t endPos);
 
-	const TranslationOptionList &GetTranslationOptionList(const Moses::WordsRange &range) const
+	const Moses::ChartTranslationOptionList &GetTranslationOptionList(const Moses::WordsRange &range) const
 	{
 		return GetTranslationOptionList(range.GetStartPos(), range.GetEndPos());
 	}

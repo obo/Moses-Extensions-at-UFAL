@@ -50,10 +50,6 @@ bool PhraseDictionaryMemory::Load(const std::vector<FactorType> &input
 	
 	m_tableLimit = tableLimit;
 
-	//factors	
-	m_inputFactors = FactorMask(input);
-	m_outputFactors = FactorMask(output);
-	VERBOSE(2,"PhraseDictionaryMemory: input=" << m_inputFactors << "  output=" << m_outputFactors << std::endl);
 
 	// data from file
 	InputFileStream inFile(filePath);
@@ -119,7 +115,8 @@ bool PhraseDictionaryMemory::Load(const std::vector<FactorType> &input
 		targetPhrase.SetSourcePhrase(&sourcePhrase);
 		targetPhrase.CreateFromString( output, targetPhraseString, factorDelimiter);
 
-		//targetPhrase.SetAlignmentInfo(tokens[3]);
+		if (tokens.size() > 3)
+			targetPhrase.SetAlignmentInfo(tokens[3]);
 		
 		// component score, for n-best output
 		std::vector<float> scv(scoreVector.size());
@@ -178,17 +175,6 @@ const TargetPhraseCollection *PhraseDictionaryMemory::GetTargetPhraseCollection(
 
 PhraseDictionaryMemory::~PhraseDictionaryMemory()
 {
-}
-
-void PhraseDictionaryMemory::SetWeightTransModel(const vector<float> &weightT)
-{
-	PhraseDictionaryNode::iterator iterDict;
-	for (iterDict = m_collection.begin() ; iterDict != m_collection.end() ; ++iterDict)
-	{
-		PhraseDictionaryNode &phraseDictionaryNode = iterDict->second;
-		// recursively set weights in nodes
-		phraseDictionaryNode.SetWeightTransModel(this, weightT);
-	}
 }
 
 TO_STRING_BODY(PhraseDictionaryMemory);

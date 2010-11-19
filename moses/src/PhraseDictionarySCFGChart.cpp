@@ -22,7 +22,7 @@
 #include "PhraseDictionarySCFG.h"
 #include "FactorCollection.h"
 #include "InputType.h"
-#include "ChartRuleCollection.h"
+#include "ChartTranslationOptionList.h"
 #include "CellCollection.h"
 #include "DotChart.h"
 #include "StaticData.h"
@@ -31,47 +31,24 @@
 using namespace std;
 using namespace Moses;
 
-Word PhraseDictionarySCFG::CreateCoveredWord(const Word &origSourceLabel, const InputType &src, const WordsRange &range) const
-{
-	string coveredWordsString = origSourceLabel.GetFactor(0)->GetString();
-	
-	for (size_t pos = range.GetStartPos(); pos <= range.GetEndPos(); ++pos)
-	{
-		const Word &word = src.GetWord(pos);
-		coveredWordsString += "_" + word.GetFactor(0)->GetString();
-	}
-	
-	FactorCollection &factorCollection = FactorCollection::Instance();
-	
-	Word ret;
-	
-	const Factor *factor = factorCollection.AddFactor(Input, 0, coveredWordsString);
-	ret.SetFactor(0, factor);
-	
-	return ret;
-}
-
-const ChartRuleCollection *PhraseDictionarySCFG::GetChartRuleCollection(
-																																							 InputType const& src
-																																							 ,WordsRange const& range
-																																							 ,bool adhereTableLimit
-																																							 ,const CellCollection &cellColl) const
-{
-	ChartRuleCollection *ret = new ChartRuleCollection();
-	m_chartTargetPhraseColl.push_back(ret);
-	
+void PhraseDictionarySCFG::GetChartRuleCollection(ChartTranslationOptionList &outColl
+																								 ,InputType const& src
+																								 ,WordsRange const& range
+																								 ,bool adhereTableLimit
+																								 ,const CellCollection &cellColl) const
+{	
 	size_t relEndPos = range.GetEndPos() - range.GetStartPos();
 	size_t absEndPos = range.GetEndPos();
 	
 	// MAIN LOOP. create list of nodes of target phrases
-	ProcessedRuleStack &runningNodes = *m_runningNodesVec[range.GetStartPos()];
-	
-	const ProcessedRuleStack::SavedNodeColl &savedNodeColl = runningNodes.GetSavedNodeColl();
-	for (size_t ind = 0; ind < savedNodeColl.size(); ++ind)
+
+	ProcessedRuleColl &processedRuleCol = *m_processedRuleColls[range.GetStartPos()];
+	const ProcessedRuleList &runningNodes = processedRuleCol.GetRunningNodes();
+    // Note that runningNodes can be expanded as the loop runs (through calls to processedRuleCol::Add())
+	for (size_t ind = 0; ind < runningNodes.size(); ++ind)
 	{
-		const SavedNode &savedNode = *savedNodeColl[ind];
-		const ProcessedRule &prevProcessedRule = savedNode.GetProcessedRule();
-		const PhraseDictionaryNodeSCFG &prevNode = static_cast<const PhraseDictionaryNodeSCFG &>(prevProcessedRule.GetLastNode());
+		const ProcessedRule &prevProcessedRule = *runningNodes[ind];
+		const PhraseDictionaryNodeSCFG &prevNode = prevProcessedRule.GetLastNode();
 		const WordConsumed *prevWordConsumed = prevProcessedRule.GetLastWordConsumed();
 		size_t startPos = (prevWordConsumed == NULL) ? range.GetStartPos() : prevWordConsumed->GetWordsRange().GetEndPos() + 1;
 		
@@ -79,15 +56,14 @@ const ChartRuleCollection *PhraseDictionarySCFG::GetChartRuleCollection(
 		if (startPos == absEndPos)
 		{
 			const Word &sourceWord = src.GetWord(absEndPos);
-			const PhraseDictionaryNodeSCFG *node = prevNode.GetChild(sourceWord, sourceWord);
+			const PhraseDictionaryNodeSCFG *node = prevNode.GetChild(sourceWord);
 			if (node != NULL)
 			{
-				const Word &sourceWord = node->GetSourceWord();
 				WordConsumed *newWordConsumed = new WordConsumed(absEndPos, absEndPos
 																												 , sourceWord
 																												 , prevWordConsumed);
 				ProcessedRule *processedRule = new ProcessedRule(*node, newWordConsumed);
-				runningNodes.Add(relEndPos+1, processedRule);
+				processedRuleCol.Add(relEndPos+1, processedRule);
 			}
 		}
 		
@@ -123,31 +99,29 @@ const ChartRuleCollection *PhraseDictionarySCFG::GetChartRuleCollection(
 			{
 				const Word &headWord = *iterHeadWords;
 				
-				const PhraseDictionaryNodeSCFG *node = prevNode.GetChild(headWord, sourceLabel);
+				const PhraseDictionaryNodeSCFG *node = prevNode.GetChild(sourceLabel, headWord);
 				if (node != NULL)
 				{
-					//const Word &sourceWord = node->GetSourceWord();
 					WordConsumed *newWordConsumed = new WordConsumed(startPos, endPos
 																													 , headWord
 																													 , prevWordConsumed);
 					
 					ProcessedRule *processedRule = new ProcessedRule(*node, newWordConsumed);
-					runningNodes.Add(stackInd, processedRule);
+					processedRuleCol.Add(stackInd, processedRule);
 				}
 			} // for (iterHeadWords
 		} // for (iterLabelList 
 	}
 	
 	// return list of target phrases
-	ProcessedRuleColl &nodes = runningNodes.Get(relEndPos + 1);
-	//DeleteDuplicates(nodes);
+	ProcessedRuleList &nodes = processedRuleCol.Get(relEndPos + 1);
 	
 	size_t rulesLimit = StaticData::Instance().GetRuleLimit();
-	ProcessedRuleColl::const_iterator iterNode;
+	ProcessedRuleList::const_iterator iterNode;
 	for (iterNode = nodes.begin(); iterNode != nodes.end(); ++iterNode)
 	{
 		const ProcessedRule &processedRule = **iterNode;
-		const PhraseDictionaryNodeSCFG &node = static_cast<const PhraseDictionaryNodeSCFG &>(processedRule.GetLastNode());
+		const PhraseDictionaryNodeSCFG &node = processedRule.GetLastNode();
 		const WordConsumed *wordConsumed = processedRule.GetLastWordConsumed();
 		assert(wordConsumed);
 		
@@ -155,62 +129,8 @@ const ChartRuleCollection *PhraseDictionarySCFG::GetChartRuleCollection(
 		
 		if (targetPhraseCollection != NULL)
 		{
-			ret->Add(*targetPhraseCollection, *wordConsumed, adhereTableLimit, rulesLimit);
+			outColl.Add(*targetPhraseCollection, *wordConsumed, adhereTableLimit, rulesLimit);
 		}
 	}
-	ret->CreateChartRules(rulesLimit);
-	
-	return ret;
+	outColl.CreateChartRules(rulesLimit);	
 }
-
-void PhraseDictionarySCFG::DeleteDuplicates(ProcessedRuleColl &nodes) const
-{
-	map<size_t, float> minEntropy;
-	map<size_t, float>::iterator iterEntropy;
-	
-	// find out min entropy for each node id
-	ProcessedRuleColl::iterator iter;
-	for (iter = nodes.begin(); iter != nodes.end(); ++iter)
-	{
-		const ProcessedRule *processedRule = *iter;
-		const PhraseDictionaryNodeSCFG &node = static_cast<const PhraseDictionaryNodeSCFG&> (processedRule->GetLastNode());
-		size_t nodeId = node.GetId();
-		float entropy = node.GetEntropy();
-		
-		iterEntropy = minEntropy.find(nodeId);
-		if (iterEntropy == minEntropy.end())
-		{
-			minEntropy[nodeId] = entropy;
-		}
-		else
-		{
-			float origEntropy = minEntropy[nodeId];
-			if (entropy < origEntropy)
-			{
-				minEntropy[nodeId] = entropy;
-			}
-		}
-	}
-	
-	// delete nodes which are over min entropy
-	size_t ind = 0;
-	while (ind < nodes.GetSize())
-	{
-		const ProcessedRule &processedRule = nodes.Get(ind);
-		const PhraseDictionaryNodeSCFG &node = static_cast<const PhraseDictionaryNodeSCFG&> (processedRule.GetLastNode());
-		size_t nodeId = node.GetId();
-		float entropy = node.GetEntropy();
-		float minEntropy1 = minEntropy[nodeId];
-		
-		if (entropy > minEntropy1)
-		{
-			nodes.Delete(ind);
-		}
-		else
-		{
-			ind++;
-		}
-	}
-}
-
-

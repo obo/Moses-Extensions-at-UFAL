@@ -31,7 +31,7 @@ float ExactCollocationScxFeature::Evaluate( const unsigned srcCorpusIndex, const
 	if( m_precPositions.size() == 0 && m_succPositions.size() == 0) {
 		size_t corpusPos = srcCorpusIndex;
 		for( size_t pos = wordsRange.GetStartPos(); pos <= wordsRange.GetEndPos(); ++pos, ++corpusPos) {
-			Word w1 = m_biSA->m_vocab->GetWord(m_biSA->m_srcCorpus->at(corpusPos));
+			Word w1 = m_biSA->m_srcVocab->GetWord(m_biSA->m_srcCorpus->at(corpusPos));
 			Word w2 = sentence.GetWord(pos);
 			// check whether both factors match
 			match = match && (w1[m_factor] == w2[m_factor]);
@@ -43,7 +43,7 @@ float ExactCollocationScxFeature::Evaluate( const unsigned srcCorpusIndex, const
 		int pos = (int)wordsRange.GetStartPos()-*it;
 		int corpusPos = (int)srcCorpusIndex - *it;
 		if( pos >= 0 && corpusPos >= 0) {
-			Word w1 = m_biSA->m_vocab->GetWord(m_biSA->m_srcCorpus->at(corpusPos));
+			Word w1 = m_biSA->m_srcVocab->GetWord(m_biSA->m_srcCorpus->at(corpusPos));
 			Word w2 = sentence.GetWord(pos);
 			// check whether both factors match
 			match = match && (w1[m_factor] == w2[m_factor]);
@@ -54,7 +54,7 @@ float ExactCollocationScxFeature::Evaluate( const unsigned srcCorpusIndex, const
 		size_t pos = wordsRange.GetEndPos()+*it;
 		size_t corpusPos = srcCorpusIndex+wordsRange.GetNumWordsCovered()-1 + *it;
 		if( pos < sentence.GetSize() && corpusPos < m_biSA->m_srcCorpus->size()) {
-			Word w1 = m_biSA->m_vocab->GetWord(m_biSA->m_srcCorpus->at(corpusPos));
+			Word w1 = m_biSA->m_srcVocab->GetWord(m_biSA->m_srcCorpus->at(corpusPos));
 			Word w2 = sentence.GetWord(pos);
 			// check whether both factors match
 			match = match && (w1[m_factor] == w2[m_factor]);
@@ -97,13 +97,13 @@ float LooseCollocationScxFeature::Evaluate( const unsigned srcCorpusIndex, const
 	// collect corpus matching factors
 	for( size_t pos = 1; pos <= m_precDistance; ++pos) {
 		if( srcCorpusIndex < pos) break;	// current index is outside of the corpus
-		Word w = m_biSA->m_vocab->GetWord(m_biSA->m_srcCorpus->at(srcCorpusIndex-pos));
+		Word w = m_biSA->m_srcVocab->GetWord(m_biSA->m_srcCorpus->at(srcCorpusIndex-pos));
 		corpusFactorsToMatch.insert( w[m_factor]);
 	}
 	unsigned srcCorpusEndPos = srcCorpusIndex + wordsRange.GetNumWordsCovered() -1;
 	for( size_t pos = 1; pos <= m_succDistance; ++pos) {
 		if( srcCorpusEndPos + pos >= m_biSA->m_srcCorpus->size()) break;	// index is outside of the corpus
-		Word w = m_biSA->m_vocab->GetWord(m_biSA->m_srcCorpus->at(srcCorpusEndPos+pos));
+		Word w = m_biSA->m_srcVocab->GetWord(m_biSA->m_srcCorpus->at(srcCorpusEndPos+pos));
 		corpusFactorsToMatch.insert( w[m_factor]);
 	}
 	int matchCount(0);
@@ -139,11 +139,11 @@ size_t DependencyScxFeature::DepthOfPos( const size_t pos, const Sentence& sente
 }
 
 size_t DependencyScxFeature::DepthOfPos( const size_t pos, const unsigned sentenceStartIndex) const {
-	Word w = m_biSA->m_vocab->GetWord(m_biSA->m_srcCorpus->at(sentenceStartIndex+pos));
+	Word w = m_biSA->m_srcVocab->GetWord(m_biSA->m_srcCorpus->at(sentenceStartIndex+pos));
 	size_t parentPos = Scan<size_t>( (w[m_factor])->GetString() );
 	size_t depth = 0;
 	while( parentPos != 0) {
-		w = m_biSA->m_vocab->GetWord(m_biSA->m_srcCorpus->at(sentenceStartIndex+parentPos-1));
+		w = m_biSA->m_srcVocab->GetWord(m_biSA->m_srcCorpus->at(sentenceStartIndex+parentPos-1));
 		parentPos = Scan<size_t>( (w[m_factor])->GetString() );
 		++depth;
 		if( depth > 10000) {
@@ -172,14 +172,14 @@ int DependencyScxFeature::PosFromRoot( const size_t pos, const Sentence& sentenc
 }
 
 int DependencyScxFeature::PosFromRoot( const size_t pos, const unsigned sentenceStartIndex) const {
-	Word w = m_biSA->m_vocab->GetWord(m_biSA->m_srcCorpus->at(sentenceStartIndex+pos));
+	Word w = m_biSA->m_srcVocab->GetWord(m_biSA->m_srcCorpus->at(sentenceStartIndex+pos));
 	size_t parentPos = Scan<size_t>( (w[m_factor])->GetString() );
 	if( parentPos == 0) return 0;	// we are at root word
 	size_t curPos = pos;
 	size_t depth(0);
 	while( parentPos != 0) {
 		curPos = parentPos;
-		w = m_biSA->m_vocab->GetWord(m_biSA->m_srcCorpus->at(sentenceStartIndex+parentPos-1));
+		w = m_biSA->m_srcVocab->GetWord(m_biSA->m_srcCorpus->at(sentenceStartIndex+parentPos-1));
 		parentPos = Scan<size_t>( (w[m_factor])->GetString() );
 		++depth;
 		if( depth > 10000) {
@@ -229,7 +229,7 @@ float DominanceDependencyScxFeature::Evaluate( const unsigned srcCorpusIndex, co
 		}	
 		size_t unmatched(0);
 		for( size_t i = 0; i < wordsRange.GetNumWordsCovered(); ++i) {
-			Word w = m_biSA->m_vocab->GetWord(m_biSA->m_srcCorpus->at(sentStartIndex+pos));
+			Word w = m_biSA->m_srcVocab->GetWord(m_biSA->m_srcCorpus->at(sentStartIndex+pos));
 			parentPos = Scan<size_t>( (w[m_factor])->GetString() );
 			if( sentIndices.find( parentPos - 1) == sentIndices.end()) {
 				++unmatched;
@@ -457,12 +457,13 @@ bool SourceContextBilingualDynSuffixArray::LoadWithRestrFactors(
 	InputFileStream targetStrme(target);
 	PrintUserTime("Loading source corpus...");
 	LoadCorpusWithRestrFactors(sourceStrme, m_inputFactorsFull, m_inputFactorsRestr, Input, 
-		*m_srcCorpus, *m_srcFactorsRestrCorpus, m_srcSntBreaks);
+		*m_srcCorpus, *m_srcFactorsRestrCorpus, m_srcSntBreaks, m_srcVocab);
+	m_srcVocab->MakeClosed();  // avoid adding new words to vocabulary
 	PrintUserTime("Loading target corpus...");
 	LoadCorpusWithRestrFactors(targetStrme, m_outputFactorsFull, m_outputFactorsRestr, Output, 
-		*m_trgCorpus, *m_trgFactorsRestrCorpus, m_trgSntBreaks);
+		*m_trgCorpus, *m_trgFactorsRestrCorpus, m_trgSntBreaks, m_trgVocab);
 	assert(m_srcSntBreaks.size() == m_trgSntBreaks.size());
-	m_vocab->MakeClosed();  // avoid adding new words to vocabulary
+	m_trgVocab->MakeClosed();  // avoid adding new words to vocabulary
 
 	// build suffix arrays and auxilliary arrays
 	PrintUserTime( "Building Source Suffix Array (restricted factors)...");
@@ -481,7 +482,8 @@ bool SourceContextBilingualDynSuffixArray::LoadWithRestrFactors(
 
 int SourceContextBilingualDynSuffixArray::LoadCorpusWithRestrFactors(InputFileStream& corpus, const FactorList& factors,
 	const FactorList& restrFactors, const FactorDirection& direction, 
-	std::vector<wordID_t>& cArray, std::vector<wordID_t>& cArrayRestr, std::vector<wordID_t>& sntArray)
+	std::vector<wordID_t>& cArray, std::vector<wordID_t>& cArrayRestr, std::vector<wordID_t>& sntArray,
+	Vocab* vocab)
 {
 	std::string line, word;
 	int sntIdx(0);
@@ -496,10 +498,10 @@ int SourceContextBilingualDynSuffixArray::LoadCorpusWithRestrFactors(InputFileSt
 		// store words in vocabulary and corpus
 		for( size_t i = 0; i < phrase.GetSize(); ++i) {
 			// full corpus
-			cArray.push_back( m_vocab->GetWordID( phrase.GetWord(i) ) );
+			cArray.push_back( vocab->GetWordID( phrase.GetWord(i) ) );
 			// restricted corpus
 			Word restrWord = RestrictWord( phrase.GetWord(i), restrFactors);
-			cArrayRestr.push_back( m_vocab->GetWordID( restrWord));
+			cArrayRestr.push_back( vocab->GetWordID( restrWord));
 		}
 		++lineCount;
 		sntIdx += phrase.GetSize();
@@ -507,7 +509,7 @@ int SourceContextBilingualDynSuffixArray::LoadCorpusWithRestrFactors(InputFileSt
 		if( lineCount % 500000 == 0) std::cerr << "[line=" << lineCount << "]" << std::endl;
 		
 	 }
-	//cArray.push_back(m_vocab->GetkOOVWordID);     // signify end of corpus 
+	//cArray.push_back(vocab->GetkOOVWordID);     // signify end of corpus 
 	return cArray.size();
 }
 
@@ -716,8 +718,8 @@ bool SourceContextBilingualDynSuffixArray::GetRestrFactorsLocalVocabIDs(const Ph
 	size_t phraseSize = src.GetSize();
 	for (size_t pos = 0; pos < phraseSize; ++pos) {
 		const Word &word = RestrictWord(src.GetWord(pos), factors);
-		wordID_t arrayId = m_vocab->GetWordID(word);
-		if (arrayId == m_vocab->GetkOOVWordID())
+		wordID_t arrayId = m_srcVocab->GetWordID(word);
+		if (arrayId == m_srcVocab->GetkOOVWordID())
 		{ // oov
 			return false;
 		}

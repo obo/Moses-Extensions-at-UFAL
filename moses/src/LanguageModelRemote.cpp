@@ -14,18 +14,11 @@ namespace Moses {
 const Factor* LanguageModelRemote::BOS = NULL;
 const Factor* LanguageModelRemote::EOS = (LanguageModelRemote::BOS + 1);
 
-LanguageModelRemote::LanguageModelRemote(bool registerScore, ScoreIndexManager &scoreIndexManager) 
-:LanguageModelSingleFactor(registerScore, scoreIndexManager)
-{
-}
-
 bool LanguageModelRemote::Load(const std::string &filePath
                                         , FactorType factorType
-                                        , float weight
                                         , size_t nGramOrder) 
 {
         m_factorType    = factorType;
-        m_weight                        = weight;
         m_nGramOrder    = nGramOrder;
 
 	int cutAt = filePath.find(':',0);

@@ -36,7 +36,7 @@ class Phrase;
 namespace Moses
 {
 
-class LanguageModelSRI : public LanguageModelSingleFactor
+class LanguageModelSRI : public LanguageModelPointerState
 {
 protected:
 	std::vector<VocabIndex> m_lmIdLookup;
@@ -50,11 +50,10 @@ protected:
 	VocabIndex GetLmID( const Factor *factor ) const;
 	
 public:
-	LanguageModelSRI(bool registerScore, ScoreIndexManager &scoreIndexManager);
+	LanguageModelSRI();
 	~LanguageModelSRI();
 	bool Load(const std::string &filePath
 					, FactorType factorType
-					, float weight
 					, size_t nGramOrder);
 
   virtual float GetValue(const std::vector<const Word*> &contextFactor, State* finalState = 0, unsigned int* len = 0) const;

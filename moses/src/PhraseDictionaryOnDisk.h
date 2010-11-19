@@ -25,7 +25,6 @@
 #include <vector>
 #include <string>
 #include "PhraseDictionary.h"
-#include "ChartRuleCollection.h"
 #include "../../OnDiskPt/src/OnDiskWrapper.h"
 #include "../../OnDiskPt/src/Word.h"
 #include "../../OnDiskPt/src/PhraseNode.h"
@@ -35,6 +34,7 @@ namespace Moses
 class TargetPhraseCollection;
 class ProcessedRuleStackOnDisk;
 class CellCollection;
+class WordPenaltyProducer;
 
 class PhraseDictionaryOnDisk : public PhraseDictionary
 {
@@ -42,6 +42,8 @@ class PhraseDictionaryOnDisk : public PhraseDictionary
 	friend std::ostream& operator<<(std::ostream&, const PhraseDictionaryOnDisk&);
 	
 protected:
+    const LMList* m_languageModels;
+    const WordPenaltyProducer* m_wpProducer;;
 	std::vector<FactorType> m_inputFactorsVec, m_outputFactorsVec;
 	std::vector<float> m_weight;
 	std::string m_filePath;
@@ -49,8 +51,6 @@ protected:
 	mutable OnDiskPt::OnDiskWrapper m_dbWrapper;
 
 	mutable std::map<UINT64, const TargetPhraseCollection*> m_cache;
-	mutable std::vector<ChartRuleCollection*> m_chartTargetPhraseColl;
-	mutable std::list<Phrase*> m_sourcePhrase;
 	mutable std::list<const OnDiskPt::PhraseNode*> m_sourcePhraseNode;
 
 	mutable std::vector<ProcessedRuleStackOnDisk*>	m_runningNodesVec;
@@ -59,7 +59,7 @@ protected:
 	
 public:
 	PhraseDictionaryOnDisk(size_t numScoreComponent, PhraseDictionaryFeature* feature)
-	: MyBase(numScoreComponent, feature)
+  : MyBase(numScoreComponent, feature), m_languageModels(NULL)
 	{}
 	virtual ~PhraseDictionaryOnDisk();
 
@@ -70,14 +70,14 @@ public:
 						, const std::vector<FactorType> &output
 						, const std::string &filePath
 						, const std::vector<float> &weight
-						, size_t tableLimit);
+						, size_t tableLimit,
+                          const LMList& languageModels,
+                          const WordPenaltyProducer* wpProducer);
 	
 	std::string GetScoreProducerDescription() const
 	{ return "BerkeleyPt"; }
 
 	// PhraseDictionary impl
-	// for mert
-	void SetWeightTransModel(const std::vector<float> &weightT);
 	//! find list of translations that can translates src. Only for phrase input
 	virtual const TargetPhraseCollection *GetTargetPhraseCollection(const Phrase& src) const;
 
@@ -86,8 +86,11 @@ public:
 	//! Create entry for translation of source to targetPhrase
 	virtual void AddEquivPhrase(const Phrase &source, TargetPhrase *targetPhrase);
 	
-	virtual const ChartRuleCollection *GetChartRuleCollection(InputType const& src, WordsRange const& range,
-																														bool adhereTableLimit,const CellCollection &cellColl) const;
+	virtual void GetChartRuleCollection(ChartTranslationOptionList &outColl
+																			,InputType const& src
+																			,WordsRange const& range
+																			,bool adhereTableLimit
+																			,const CellCollection &cellColl) const;
 	
 	void InitializeForInput(const InputType& input);
 	void CleanUp();

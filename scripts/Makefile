@@ -10,8 +10,8 @@ DS?=$(shell date '+%Y%m%d')
 # Set BINDIR to the directory where GIZA++ and other tools are installed.
 # The values here are just the defaults in case your environment does not set
 # them.
-TARGETDIR=/home/pkoehn/statmt/bin
-BINDIR=/home/pkoehn/statmt/bin
+TARGETDIR=/Users/hieuhoang/temp
+BINDIR=/Users/hieuhoang/temp
 
 MAIN_SCRIPTS_TARGET_DIR=$(TARGETDIR)
 # MAIN_SCRIPTS_TARGET_DIR=$(shell echo `pwd`/temp)
@@ -26,14 +26,14 @@ RELEASEDIR=$(TARGETDIR)/scripts-$(TS)
 
 all: compile
 
-SUBDIRS=cmert-0.5 phrase-extract symal mbr lexical-reordering
-SUBDIRS_CLEAN=$(SUBDIRS) memscore
+SUBDIRS=training/phrase-extract training/symal training/mbr training/lexical-reordering ems/biconcor
+SUBDIRS_CLEAN=$(SUBDIRS) training/memscore
 
 compile: compile-memscore
 	touch release-exclude # No files excluded by default
 	pwd=`pwd`; \
 	for subdir in $(SUBDIRS); do \
-	  $(MAKE) -C training/$$subdir || exit 1; \
+	  $(MAKE) -C $$subdir || exit 1; \
 	  echo "### Compiler $$subdir"; \
 	  cd $$pwd; \
 	done
@@ -50,7 +50,7 @@ compile-memscore:
 clean:
 	pwd=`pwd`; \
 	for subdir in $(SUBDIRS_CLEAN); do \
-	  $(MAKE) -C training/$$subdir clean || exit 1; \
+	  $(MAKE) -C $$subdir clean || exit 1; \
 	  echo "### Compiler $$subdir"; \
 	  cd $$pwd; \
 	done
