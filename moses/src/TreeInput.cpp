@@ -20,11 +20,6 @@ namespace Moses
  * \param reorderingConstraint reordering constraint zones specified by xml
  * \param walls reordering constraint walls specified by xml
  */
-/*TODO: we'd only have to return a vector of XML options if we dropped linking. 2-d vector
- is so we can link things up afterwards. We can't create TranslationOptions as we
- parse because we don't have the completed source parsed until after this function
- removes all the markup from it (CreateFromString in Sentence::Read).
- */
 bool TreeInput::ProcessAndStripXMLTags(string &line, std::vector<XMLParseOutput> &sourceLabels)
 {
 	//parse XML markup in translation line
@@ -42,9 +37,7 @@ bool TreeInput::ProcessAndStripXMLTags(string &line, std::vector<XMLParseOutput>
 	vector< OpenedTag > tagStack; // stack that contains active opened tags
 	
 	string cleanLine; // return string (text without xml)
-	vector<XmlOption*> linkedOptions;
 	size_t wordPos = 0; // position in sentence (in terms of number of words)
-	bool isLinked = false;
 	const vector<FactorType> &outputFactorOrder = StaticData::Instance().GetOutputFactorOrder();
 	const string &factorDelimiter = StaticData::Instance().GetFactorDelimiter();
 	
@@ -111,16 +104,6 @@ bool TreeInput::ProcessAndStripXMLTags(string &line, std::vector<XMLParseOutput>
 			
 			if (isOpen || isUnary)
 			{
-				// special case: linked tag turns on linked flag
-				if (tagName == "linked")
-				{
-					if (isLinked)
-					{
-						TRACE_ERR("ERROR: second linked tag opened before first one closed: " << line << endl);
-						return false;
-					}
-					isLinked = true;
-				}
 				// put the tag on the tag stack
 				OpenedTag openedTag = make_pair( tagName, make_pair( wordPos, tagContent ) );
 				tagStack.push_back( openedTag );
@@ -269,21 +252,20 @@ void TreeInput::AddChartLabel(size_t startPos, size_t endPos, const Word &label
 	assert(label.IsNonTerminal());
 	
 	SourceLabelOverlap overlapType = StaticData::Instance().GetSourceLabelOverlap();
-	LabelList &list = GetLabelList(startPos, endPos);
+	NonTerminalSet &list = GetLabelSet(startPos, endPos);
 	switch (overlapType)
 	{
 		case SourceLabelOverlapAdd: 
-			list.push_back(label);
+			list.insert(label);
 			break;
 		case SourceLabelOverlapReplace:
 			if (list.size() > 0) // replace existing label
-				list[0] = label;
-			else
-				list.push_back(label);
+                list.clear();
+			list.insert(label);
 			break;
 		case SourceLabelOverlapDiscard:
 			if (list.size() == 0) 
-				list.push_back(label);
+				list.insert(label);
 			break;
 	}
 }
@@ -307,9 +289,9 @@ std::ostream& operator<<(std::ostream &out, const TreeInput &input)
 	{
 		for (size_t endPos = startPos; endPos < size; ++endPos)
 		{
-			const LabelList &labelList = input.GetLabelList(startPos, endPos);
-			LabelList::const_iterator iter;
-			for (iter = labelList.begin(); iter != labelList.end(); ++iter)
+			const NonTerminalSet &labelSet = input.GetLabelSet(startPos, endPos);
+			NonTerminalSet::const_iterator iter;
+			for (iter = labelSet.begin(); iter != labelSet.end(); ++iter)
 			{
 				const Word &word = *iter;
 				out << "[" << startPos <<"," << endPos << "]=" 

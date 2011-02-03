@@ -2,12 +2,12 @@
 
 #include "util/exception.hh"
 
+#include <iostream>
 #include <string>
 #include <limits>
 
 #include <assert.h>
 #include <ctype.h>
-#include <err.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <sys/mman.h>
@@ -27,7 +27,7 @@ EndOfFileException::EndOfFileException() throw() {
 EndOfFileException::~EndOfFileException() throw() {}
 
 ParseNumberException::ParseNumberException(StringPiece value) throw() {
-  *this << "Could not parse \"" << value << "\" into a float";
+  *this << "Could not parse \"" << value << "\" into a number";
 }
 
 GZException::GZException(void *file) {
@@ -36,6 +36,9 @@ GZException::GZException(void *file) {
   *this << gzerror(file, &num) << " from zlib";
 #endif // HAVE_ZLIB
 }
+
+// Sigh this is the only way I could come up with to do a _const_ bool.  It has ' ', '\f', '\n', '\r', '\t', and '\v' (same as isspace on C locale). 
+const bool kSpaces[256] = {0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 int OpenReadOrThrow(const char *name) {
   int ret = open(name, O_RDONLY);
@@ -68,10 +71,43 @@ FilePiece::~FilePiece() {
     file_.release();
     int ret;
     if (Z_OK != (ret = gzclose(gz_file_))) {
-      errx(1, "could not close file %s using zlib", file_name_.c_str());
+      std::cerr << "could not close file " << file_name_ << " using zlib" << std::endl;
+      abort();
     }
   }
 #endif
+}
+
+StringPiece FilePiece::ReadLine(char delim) throw (GZException, EndOfFileException) {
+  size_t skip = 0;
+  while (true) {
+    for (const char *i = position_ + skip; i < position_end_; ++i) {
+      if (*i == delim) {
+        StringPiece ret(position_, i - position_);
+        position_ = i + 1;
+        return ret;
+      }
+    }
+    if (at_end_) {
+      if (position_ == position_end_) Shift();
+      return Consume(position_end_);
+    }
+    skip = position_end_ - position_;
+    Shift();
+  }
+}
+
+float FilePiece::ReadFloat() throw(GZException, EndOfFileException, ParseNumberException) {
+  return ReadNumber<float>();
+}
+double FilePiece::ReadDouble() throw(GZException, EndOfFileException, ParseNumberException) {
+  return ReadNumber<double>();
+}
+long int FilePiece::ReadLong() throw(GZException, EndOfFileException, ParseNumberException) {
+  return ReadNumber<long int>();
+}
+unsigned long int FilePiece::ReadULong() throw(GZException, EndOfFileException, ParseNumberException) {
+  return ReadNumber<unsigned long int>();
 }
 
 void FilePiece::Initialize(const char *name, std::ostream *show_progress, off_t min_buffer) throw (GZException) {
@@ -108,14 +144,34 @@ void FilePiece::Initialize(const char *name, std::ostream *show_progress, off_t 
   }
 }
 
-float FilePiece::ReadFloat() throw(GZException, EndOfFileException, ParseNumberException) {
+namespace {
+void ParseNumber(const char *begin, char *&end, float &out) {
+#ifdef sun
+  out = static_cast<float>(strtod(begin, &end));
+#else
+  out = strtof(begin, &end);
+#endif
+}
+void ParseNumber(const char *begin, char *&end, double &out) {
+  out = strtod(begin, &end);
+}
+void ParseNumber(const char *begin, char *&end, long int &out) {
+  out = strtol(begin, &end, 10);
+}
+void ParseNumber(const char *begin, char *&end, unsigned long int &out) {
+  out = strtoul(begin, &end, 10);
+}
+} // namespace
+
+template <class T> T FilePiece::ReadNumber() throw(GZException, EndOfFileException, ParseNumberException) {
   SkipSpaces();
   while (last_space_ < position_) {
     if (at_end_) {
       // Hallucinate a null off the end of the file.
       std::string buffer(position_, position_end_);
       char *end;
-      float ret = strtof(buffer.c_str(), &end);
+      T ret;
+      ParseNumber(buffer.c_str(), end, ret);
       if (buffer.c_str() == end) throw ParseNumberException(buffer);
       position_ += end - buffer.c_str();
       return ret;
@@ -123,50 +179,26 @@ float FilePiece::ReadFloat() throw(GZException, EndOfFileException, ParseNumberE
     Shift();
   }
   char *end;
-  float ret = strtof(position_, &end);
+  T ret;
+  ParseNumber(position_, end, ret);
   if (end == position_) throw ParseNumberException(ReadDelimited());
   position_ = end;
   return ret;
 }
 
-void FilePiece::SkipSpaces() throw (GZException, EndOfFileException) {
-  for (; ; ++position_) {
-    if (position_ == position_end_) Shift();
-    if (!isspace(*position_)) return;
-  }
-}
-
-const char *FilePiece::FindDelimiterOrEOF() throw (GZException, EndOfFileException) {
-  for (const char *i = position_; i <= last_space_; ++i) {
-    if (isspace(*i)) return i;
-  }
-  while (!at_end_) {
-    size_t skip = position_end_ - position_;
-    Shift();
-    for (const char *i = position_ + skip; i <= last_space_; ++i) {
-      if (isspace(*i)) return i;
+const char *FilePiece::FindDelimiterOrEOF(const bool *delim) throw (GZException, EndOfFileException) {
+  size_t skip = 0;
+  while (true) {
+    for (const char *i = position_ + skip; i < position_end_; ++i) {
+      if (delim[static_cast<unsigned char>(*i)]) return i;
     }
-  }
-  return position_end_;
-}
-
-StringPiece FilePiece::ReadLine(char delim) throw (GZException, EndOfFileException) {
-  const char *start = position_;
-  do {
-    for (const char *i = start; i < position_end_; ++i) {
-      if (*i == delim) {
-        StringPiece ret(position_, i - position_);
-        position_ = i + 1;
-        return ret;
-      }
+    if (at_end_) {
+      if (position_ == position_end_) Shift();
+      return position_end_;
     }
-    size_t skip = position_end_ - position_;
+    skip = position_end_ - position_;
     Shift();
-    start = position_ + skip;
-  } while (!at_end_);
-  StringPiece ret(position_, position_end_ - position_);
-  position_ = position_end_;
-  return ret;
+  }
 }
 
 void FilePiece::Shift() throw(GZException, EndOfFileException) {

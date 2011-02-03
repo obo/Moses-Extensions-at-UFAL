@@ -8,6 +8,9 @@ libmoses_la_HEADERS = \
         BilingualDynSuffixArray.h \
         BitmapContainer.h \
         CellCollection.h \
+        ChartRuleLookupManager.h \
+        ChartRuleLookupManagerMemory.h \
+        ChartRuleLookupManagerOnDisk.h \
         ChartTranslationOption.h \
         ChartTranslationOptionList.h \
         ConfusionNet.h \
@@ -56,6 +59,7 @@ libmoses_la_HEADERS = \
         LexicalReorderingState.h \
         LexicalReorderingTable.h \
         Manager.h \
+        NonTerminal.h \
         ObjectPool.h \
         PCNTools.h \
         PDTAimp.h \
@@ -89,6 +93,7 @@ libmoses_la_HEADERS = \
         StaticData.h \
         TargetPhrase.h \
         TargetPhraseCollection.h \
+        ThreadPool.h \
         Timer.h \
         TranslationOption.h \
         TranslationOptionCollection.h \
@@ -138,6 +143,8 @@ libmoses_la_SOURCES = \
         AlignmentInfo.cpp \
         BilingualDynSuffixArray.cpp \
         BitmapContainer.cpp \
+        ChartRuleLookupManagerMemory.cpp \
+        ChartRuleLookupManagerOnDisk.cpp \
         ChartTranslationOption.cpp \
         ChartTranslationOptionList.cpp \
         ConfusionNet.cpp \
@@ -193,11 +200,9 @@ libmoses_la_SOURCES = \
         PhraseDictionaryDynSuffixArray.cpp \
         PhraseDictionaryMemory.cpp \
         PhraseDictionarySCFG.cpp \
-        PhraseDictionarySCFGChart.cpp \
         PhraseDictionaryNode.cpp \
         PhraseDictionaryNodeSCFG.cpp \
         PhraseDictionaryOnDisk.cpp \
-        PhraseDictionaryOnDiskChart.cpp \
         PhraseDictionaryTree.cpp \
         PhraseDictionaryTreeAdaptor.cpp \
         PrefixTreeMap.cpp \
@@ -217,6 +222,7 @@ libmoses_la_SOURCES = \
         StaticData.cpp \
         TargetPhrase.cpp \
         TargetPhraseCollection.cpp \
+        ThreadPool.cpp \
         Timer.cpp \
         TranslationOption.cpp \
         TranslationOptionCollection.cpp \
@@ -284,4 +290,4 @@ if KEN_LM
 libmoses_la_SOURCES += LanguageModelKen.cpp
 endif
 
-libmoses_la_LIBADD = $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB)
+libmoses_la_LIBADD = $(BOOST_THREAD_LDFLAGS) $(BOOST_THREAD_LIBS)

@@ -4,6 +4,7 @@
 #include "lm/binary_format.hh"
 #include "lm/config.hh"
 #include "lm/facade.hh"
+#include "lm/max_order.hh"
 #include "lm/search_hashed.hh"
 #include "lm/search_trie.hh"
 #include "lm/vocab.hh"
@@ -12,18 +13,15 @@
 #include <algorithm>
 #include <vector>
 
+#include <string.h>
+
 namespace util { class FilePiece; }
 
 namespace lm {
 namespace ngram {
 
-// If you need higher order, change this and recompile.  
-// Having this limit means that State can be
-// (kMaxOrder - 1) * sizeof(float) bytes instead of
-// sizeof(float*) + (kMaxOrder - 1) * sizeof(float) + malloc overhead
-const std::size_t kMaxOrder = 6;
-
-// This is a POD.  
+// This is a POD but if you want memcmp to return the same as operator==, call
+// ZeroRemaining first.    
 class State {
   public:
     bool operator==(const State &other) const {
@@ -36,6 +34,24 @@ class State {
       // If the histories are equal, so are the backoffs.  
       return true;
     }
+
+    // Three way comparison function.  
+    int Compare(const State &other) const {
+      if (valid_length_ == other.valid_length_) {
+        return memcmp(history_, other.history_, valid_length_ * sizeof(WordIndex));
+      }
+      return (valid_length_ < other.valid_length_) ? -1 : 1;
+    }
+
+    // Call this before using raw memcmp.  
+    void ZeroRemaining() {
+      for (unsigned char i = valid_length_; i < kMaxOrder - 1; ++i) {
+        history_[i] = 0;
+        backoff_[i] = 0.0;
+      }
+    }
+
+    unsigned char ValidLength() const { return valid_length_; }
 
     // You shouldn't need to touch anything below this line, but the members are public so FullState will qualify as a POD.  
     // This order minimizes total size of the struct if WordIndex is 64 bit, float is 32 bit, and alignment of 64 bit integers is 64 bit.  
@@ -83,14 +99,14 @@ template <class Search, class VocabularyT> class GenericModel : public base::Mod
 
     float SlowBackoffLookup(const WordIndex *const context_rbegin, const WordIndex *const context_rend, unsigned char start) const;
 
-    FullScoreReturn ScoreExceptBackoff(const WordIndex *context_rbegin, const WordIndex *context_rend, const WordIndex new_word, unsigned char &backoff_start, State &out_state) const;
+    FullScoreReturn ScoreExceptBackoff(const WordIndex *context_rbegin, const WordIndex *context_rend, const WordIndex new_word, State &out_state) const;
 
     // Appears after Size in the cc file.
     void SetupMemory(void *start, const std::vector<uint64_t> &counts, const Config &config);
 
     void InitializeFromBinary(void *start, const Parameters &params, const Config &config, int fd);
 
-    void InitializeFromARPA(const char *file, util::FilePiece &f, void *start, const Parameters &params, const Config &config);
+    void InitializeFromARPA(const char *file, const Config &config);
 
     Backing &MutableBacking() { return backing_; }
 

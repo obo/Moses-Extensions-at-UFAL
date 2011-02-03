@@ -85,6 +85,12 @@ AC_ARG_WITH(zlib,
             [with_zlib=no]
            )
 
+AC_ARG_WITH(tcmalloc,
+            [AC_HELP_STRING([--with-tcmalloc], [(optional) link with tcmalloc; default is no])],
+            [with_tcmalloc=$withval],
+            [with_tcmalloc=no],
+           )
+
 AM_CONDITIONAL([INTERNAL_LM], false)
 AM_CONDITIONAL([SRI_LM], false)
 AM_CONDITIONAL([IRST_LM], false)
@@ -106,13 +112,13 @@ fi
 if test "x$with_threads" = 'xyes' || test "x$enable_boost" = 'xyes'
 then
     AC_MSG_NOTICE([Using Boost library])
-    AX_BOOST_BASE([1.36.0])
+    BOOST_REQUIRE([1.36.0])
 fi
 
 if test "x$with_threads" = 'xyes'
 then
     AC_MSG_NOTICE([Building threaded moses])
-    AX_BOOST_THREAD
+    BOOST_THREADS
     CPPFLAGS="$CPPFLAGS -DWITH_THREADS" 
     AM_CONDITIONAL([WITH_THREADS],true)
 else
@@ -197,12 +203,16 @@ then
                  [AC_DEFINE([HAVE_KENLM], [], [flag for KENLM])],
                  [AC_MSG_ERROR([Cannot find KEN-LM in ${PWD}/kenlm])])
 
-  LIB_KENLM="-lkenlm"
-  LDFLAGS="$LDFLAGS -L${PWD}/kenlm"
-  LIBS="$LIBS $LIB_KENLM"
-  FMTLIBS="$FMTLIBS libkenlm.a"
+  KENLM_LDFLAGS="-L\$(top_srcdir)/kenlm -lkenlm -lz"
+  KENLM_DEPS="\$(top_srcdir)/kenlm/libkenlm.la"
+  FMTLIBS="$FMTLIBS libkenlm.la"
   AM_CONDITIONAL([KEN_LM], true)
+else
+  KENLM_LDFLAGS=""
+  KENLM_DEPS=""
 fi
+AC_SUBST(KENLM_LDFLAGS)
+AC_SUBST(KENLM_DEPS)
 
 if test "x$with_randlm" != 'xno'
 then
@@ -222,6 +232,10 @@ then
   AM_CONDITIONAL([RAND_LM], true)
 fi
 
+if test "x$with_tcmalloc" != 'xno'
+then
+  AC_CHECK_LIB([tcmalloc], [malloc], [], [AC_MSG_ERROR([Cannot find tcmalloc])])
+fi
 
 
 AM_CONDITIONAL([WITH_MERT],false)

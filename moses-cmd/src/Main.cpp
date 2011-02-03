@@ -32,14 +32,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <vld.h>
 #endif
 
-#ifdef WITH_THREADS
-#include <boost/thread/mutex.hpp>
-#endif
-
-#ifdef BOOST_HAS_PTHREADS
-#include <pthread.h>
-#endif
-
 #include "Hypothesis.h"
 #include "IOWrapper.h"
 #include "LatticeMBR.h"
@@ -49,6 +41,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "mbr.h"
 #include "ThreadPool.h"
 #include "TranslationAnalysis.h"
+#include "OutputCollector.h"
 
 #ifdef HAVE_PROTOBUF
 #include "hypergraph.pb.h"
@@ -57,63 +50,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 using namespace std;
 using namespace Moses;
 
+static const size_t PRECISION = 3;
+
 /** Enforce rounding */
-void fix(std::ostream& stream) {
+void fix(std::ostream& stream, size_t size) {
     stream.setf(std::ios::fixed);
-    stream.precision(3);
+    stream.precision(size);
 }
 
-
-/**
-  * Makes sure output goes in the correct order.
-  **/
-class OutputCollector {
-    public:
-        OutputCollector(std::ostream* outStream= &cout, std::ostream* debugStream=&cerr) :
-            m_nextOutput(0),m_outStream(outStream),m_debugStream(debugStream)  {}
-
-
-        /**
-          * Write or cache the output, as appropriate.
-          **/
-        void Write(int sourceId,const string& output,const string& debug="") {
-#ifdef WITH_THREADS
-            boost::mutex::scoped_lock lock(m_mutex);
-#endif
-            if (sourceId == m_nextOutput) {
-                //This is the one we were expecting
-                *m_outStream << output << flush;
-                *m_debugStream << debug << flush;
-                ++m_nextOutput;
-                //see if there's any more
-                map<int,string>::iterator iter;
-                while ((iter = m_outputs.find(m_nextOutput)) != m_outputs.end()) {
-                    *m_outStream << iter->second << flush;
-                    m_outputs.erase(iter);
-                    ++m_nextOutput;
-                    map<int,string>::iterator debugIter = m_debugs.find(iter->first);
-                    if (debugIter != m_debugs.end()) {
-                      *m_debugStream << debugIter->second << flush;
-                      m_debugs.erase(debugIter);
-                    }
-                }
-            } else {
-                //save for later
-                m_outputs[sourceId] = output;
-                m_debugs[sourceId] = debug;
-            }
-        }
-        
-     private:
-        map<int,string> m_outputs;
-        map<int,string> m_debugs;
-        int m_nextOutput;
-        ostream* m_outStream;
-        ostream* m_debugStream;
-#ifdef WITH_THREADS
-        boost::mutex m_mutex;
-#endif
-};
 
 /**
   * Translates a sentence.
@@ -145,7 +89,7 @@ class TranslationTask : public Task {
             //Word Graph
             if (m_wordGraphCollector) {
                 ostringstream out;
-                fix(out);
+                fix(out,PRECISION);
                 manager.GetWordGraph(m_lineNumber, out);
                 m_wordGraphCollector->Write(m_lineNumber, out.str());
             }
@@ -153,7 +97,7 @@ class TranslationTask : public Task {
             //Search Graph
             if (m_searchGraphCollector) {
                 ostringstream out;
-                fix(out);
+                fix(out,PRECISION);
                 manager.OutputSearchGraph(m_lineNumber, out);
                 m_searchGraphCollector->Write(m_lineNumber, out.str());
 
@@ -174,7 +118,7 @@ class TranslationTask : public Task {
             if (m_outputCollector) {
                 ostringstream out;
                 ostringstream debug;
-                fix(debug);
+                fix(debug,PRECISION);
                 
                 //All derivations - send them to debug stream
                 if (staticData.PrintAllDerivations()) {
@@ -267,7 +211,7 @@ class TranslationTask : public Task {
             //detailed translation reporting
             if (m_detailedTranslationCollector) {
 								ostringstream out;
-                fix(out);
+                fix(out,PRECISION);
                 TranslationAnalysis::PrintTranslationAnalysis(manager.GetTranslationSystem(), out, manager.GetBestHypothesis());
                 m_detailedTranslationCollector->Write(m_lineNumber,out.str());
             }
@@ -291,6 +235,39 @@ class TranslationTask : public Task {
 
 };
 
+static void PrintFeatureWeight(const FeatureFunction* ff) {
+  
+  size_t weightStart  = StaticData::Instance().GetScoreIndexManager().GetBeginIndex(ff->GetScoreBookkeepingID());
+  size_t weightEnd  = StaticData::Instance().GetScoreIndexManager().GetEndIndex(ff->GetScoreBookkeepingID());
+  for (size_t i = weightStart; i < weightEnd; ++i) {
+    cout << ff->GetScoreProducerDescription() <<  " " << ff->GetScoreProducerWeightShortName() << " " 
+        << StaticData::Instance().GetAllWeights()[i] << endl;
+  }
+}
+
+
+static void ShowWeights() {
+  fix(cout,6);
+  const StaticData& staticData = StaticData::Instance();
+  const TranslationSystem& system = staticData.GetTranslationSystem(TranslationSystem::DEFAULT);
+  const vector<const StatelessFeatureFunction*>& slf =system.GetStatelessFeatureFunctions();
+  const vector<const StatefulFeatureFunction*>& sff = system.GetStatefulFeatureFunctions();
+  const vector<PhraseDictionaryFeature*>& pds = system.GetPhraseDictionaries();
+  const vector<GenerationDictionary*>& gds = system.GetGenerationDictionaries();
+  for (size_t i = 0; i < sff.size(); ++i) {
+    PrintFeatureWeight(sff[i]);
+  }
+  for (size_t i = 0; i < slf.size(); ++i) {
+    PrintFeatureWeight(slf[i]);
+  }
+  for (size_t i = 0; i < pds.size(); ++i) {
+    PrintFeatureWeight(pds[i]);
+  }
+  for (size_t i = 0; i < gds.size(); ++i) {
+    PrintFeatureWeight(gds[i]);
+  }
+}
+
 int main(int argc, char** argv) {
     
 #ifdef HAVE_PROTOBUF
@@ -303,8 +280,8 @@ int main(int argc, char** argv) {
         TRACE_ERR(endl);
     }
 
-    fix(cout);
-    fix(cerr);
+    fix(cout,PRECISION);
+    fix(cerr,PRECISION);
 
 
     Parameter* params = new Parameter();
@@ -333,6 +310,11 @@ int main(int argc, char** argv) {
     
     if (!StaticData::LoadDataStatic(params)) {
         exit(1);
+    }
+    
+    if (params->isParamSpecified("show-weights")) {
+      ShowWeights();
+      exit(0);
     }
 
     const StaticData& staticData = StaticData::Instance();
@@ -423,7 +405,3 @@ int main(int argc, char** argv) {
 		return EXIT_SUCCESS;
 #endif
 }
-
-
-
-
